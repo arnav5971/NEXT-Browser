@@ -209,7 +209,7 @@ fun HomeScreen(
         Spacer(Modifier.weight(1f))
 
         Text(
-            text = "PHASE 3  •  TABS & SESSIONS",
+            text = "PHASE 5  •  BOOKMARKS & HISTORY",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 18.dp),
@@ -226,7 +226,7 @@ private fun QuickAccessTile(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier.height(94.dp).clickable(onClick = onClick),
