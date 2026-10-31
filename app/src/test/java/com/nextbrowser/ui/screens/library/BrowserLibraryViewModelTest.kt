@@ -23,15 +23,13 @@ class BrowserLibraryViewModelTest {
     @Test
     fun updateSearchQueryPublishesNewValue() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        var viewModel: BrowserLibraryViewModel? = null
+        val viewModel = BrowserLibraryViewModel(FakeBrowserLibraryRepository())
         try {
-            viewModel = BrowserLibraryViewModel(FakeBrowserLibraryRepository())
-
             viewModel.updateSearchQuery("  example  ")
 
             assertEquals("  example  ", viewModel.searchQuery.value)
         } finally {
-            viewModel?.viewModelScope?.cancel()
+            viewModel.viewModelScope.cancel()
             Dispatchers.resetMain()
         }
     }
@@ -39,10 +37,9 @@ class BrowserLibraryViewModelTest {
     @Test
     fun libraryActionsAreDelegatedToRepository() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        var viewModel: BrowserLibraryViewModel? = null
+        val repository = FakeBrowserLibraryRepository()
+        val viewModel = BrowserLibraryViewModel(repository)
         try {
-            val repository = FakeBrowserLibraryRepository()
-            viewModel = BrowserLibraryViewModel(repository)
             val bookmark = BookmarkEntity(
                 id = "bookmark-1",
                 title = "Example",
