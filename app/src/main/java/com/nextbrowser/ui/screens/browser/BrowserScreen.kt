@@ -460,5 +460,12 @@ internal fun resolveAddress(
 }
 
 private val HOST_WITH_OPTIONAL_PORT = Regex(
-    "^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}(?::[0-9]{1,5})?(?:/[^\\s]*)?$"
+    "^(?=.{1,253}$)(?:" +
+        // Accept valid dotted IPv4 addresses as hosts, not search terms.
+        "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])" +
+        "(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}" +
+        "|" +
+        // Or a conventional domain name with a valid-looking alphabetic TLD.
+        "(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}" +
+        ")(?::[0-9]{1,5})?(?:/[^\\s]*)?$"
 )
