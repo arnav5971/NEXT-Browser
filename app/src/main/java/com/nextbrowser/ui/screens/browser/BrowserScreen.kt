@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Home
@@ -58,7 +59,9 @@ fun BrowserScreen(
     tabCount: Int,
     isPrivateTab: Boolean,
     onUrlChanged: (String) -> Unit,
-    onTitleChanged: (String) -> Unit
+    onTitleChanged: (String) -> Unit,
+    onPageVisited: (String, String) -> Unit,
+    onAddBookmark: (String, String) -> Unit
 ) {
     val context = LocalContext.current
     var addressText by remember { mutableStateOf(initialUrl) }
@@ -133,6 +136,9 @@ fun BrowserScreen(
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Go")
             }
+            IconButton(onClick = { onAddBookmark(addressText, pageTitle) }, enabled = addressText.isNotBlank()) {
+                Icon(Icons.Default.BookmarkAdd, contentDescription = "Add bookmark")
+            }
             IconButton(onClick = onShowTabs) {
                 Icon(Icons.Default.Tab, contentDescription = "Open tabs")
             }
@@ -199,6 +205,7 @@ fun BrowserScreen(
                             if (!url.isNullOrBlank()) addressText = url
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
                             onTitleChanged(pageTitle)
+                            onPageVisited(url ?: addressText, pageTitle)
                             progress = 100
                             isLoading = false
                             canGoBack = view?.canGoBack() == true
