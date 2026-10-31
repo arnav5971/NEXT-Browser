@@ -1,8 +1,6 @@
 package com.nextbrowser.ui.screens.browser
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.webkit.SafeBrowsingResponse
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -29,6 +27,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tab
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -106,10 +105,10 @@ fun BrowserScreen(
         browserEngine?.goBack()
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(browserEngine) {
+        val engine = browserEngine
         onDispose {
-            browserEngine?.destroy()
-            browserEngine = null
+            engine?.destroy()
         }
     }
 
@@ -226,8 +225,8 @@ fun BrowserScreen(
                             currentPageVisitedHandler(url ?: addressText, pageTitle)
                             progress = 100
                             isLoading = false
-                            canGoBack = view?.canGoBack() == true
-                            canGoForward = view?.canGoForward() == true
+                            canGoBack = browserEngine?.canGoBack == true
+                            canGoForward = browserEngine?.canGoForward == true
                         }
 
                         override fun onReceivedError(
@@ -309,11 +308,19 @@ fun BrowserScreen(
                 }
                 IconButton(
                     onClick = {
-                        pageError = null
-                        browserEngine?.reload()
+                        if (isLoading) {
+                            browserEngine?.stopLoading()
+                            isLoading = false
+                        } else {
+                            pageError = null
+                            browserEngine?.reload()
+                        }
                     }
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Reload")
+                    Icon(
+                        imageVector = if (isLoading) Icons.Default.Stop else Icons.Default.Refresh,
+                        contentDescription = if (isLoading) "Stop loading" else "Reload"
+                    )
                 }
                 IconButton(onClick = onShowDownloads, enabled = !isPrivateTab) {
                     Icon(Icons.Default.Download, contentDescription = if (isPrivateTab) "Downloads unavailable in private tabs" else "Downloads")
