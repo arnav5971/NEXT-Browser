@@ -250,10 +250,40 @@ fun BrowserScreen(
                         ) {
                             super.onReceivedError(view, request, error)
                             if (request?.isForMainFrame == true) {
-                                pageError = error?.description?.toString()
-                                    ?: "The page could not be loaded."
+                                pageError = "Network error: ${error?.description ?: "The page could not be loaded."}"
                                 isLoading = false
                             }
+                        }
+
+                        override fun onReceivedHttpError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            errorResponse: android.webkit.WebResourceResponse?
+                        ) {
+                            super.onReceivedHttpError(view, request, errorResponse)
+                            if (request?.isForMainFrame == true) {
+                                pageError = "Website returned HTTP ${errorResponse?.statusCode ?: "error"}."
+                                isLoading = false
+                            }
+                        }
+
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: android.webkit.SslErrorHandler?,
+                            error: android.net.http.SslError?
+                        ) {
+                            handler?.cancel()
+                            pageError = "Secure connection failed. Check your device date, time, and network."
+                            isLoading = false
+                        }
+
+                        override fun onRenderProcessGone(
+                            view: WebView?,
+                            detail: android.webkit.RenderProcessGoneDetail?
+                        ): Boolean {
+                            pageError = "The web page renderer stopped. Reload the page to try again."
+                            isLoading = false
+                            return true
                         }
                     }
 
