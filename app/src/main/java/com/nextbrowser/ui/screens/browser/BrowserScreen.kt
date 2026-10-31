@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +69,8 @@ fun BrowserScreen(
     onShowDownloads: () -> Unit
 ) {
     val context = LocalContext.current
+    val currentIsPrivateTab by rememberUpdatedState(isPrivateTab)
+    val currentDownloadHandler by rememberUpdatedState(onDownloadRequested)
     var addressText by remember { mutableStateOf(initialUrl) }
     var pageTitle by remember { mutableStateOf("New tab") }
     var progress by remember { mutableStateOf(0) }
@@ -242,7 +245,7 @@ fun BrowserScreen(
 
                     setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
                         if (url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)) {
-                            if (!isPrivateTab) onDownloadRequested(url, userAgent, contentDisposition, mimeType, contentLength)
+                            if (!currentIsPrivateTab) currentDownloadHandler(url, userAgent, contentDisposition, mimeType, contentLength)
                         }
                     }
 
