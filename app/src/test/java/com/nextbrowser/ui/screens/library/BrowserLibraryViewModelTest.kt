@@ -3,6 +3,8 @@ package com.nextbrowser.ui.screens.library
 import com.nextbrowser.data.local.BookmarkEntity
 import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.repository.BrowserLibraryRepository
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,13 +23,15 @@ class BrowserLibraryViewModelTest {
     @Test
     fun updateSearchQueryPublishesNewValue() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        var viewModel: BrowserLibraryViewModel? = null
         try {
-            val viewModel = BrowserLibraryViewModel(FakeBrowserLibraryRepository())
+            viewModel = BrowserLibraryViewModel(FakeBrowserLibraryRepository())
 
             viewModel.updateSearchQuery("  example  ")
 
             assertEquals("  example  ", viewModel.searchQuery.value)
         } finally {
+            viewModel?.viewModelScope?.cancel()
             Dispatchers.resetMain()
         }
     }
@@ -35,9 +39,10 @@ class BrowserLibraryViewModelTest {
     @Test
     fun libraryActionsAreDelegatedToRepository() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        var viewModel: BrowserLibraryViewModel? = null
         try {
             val repository = FakeBrowserLibraryRepository()
-            val viewModel = BrowserLibraryViewModel(repository)
+            viewModel = BrowserLibraryViewModel(repository)
             val bookmark = BookmarkEntity(
                 id = "bookmark-1",
                 title = "Example",
@@ -62,6 +67,7 @@ class BrowserLibraryViewModelTest {
             assertEquals(listOf(history.id), repository.removedHistoryIds)
             assertEquals(1, repository.clearHistoryCalls)
         } finally {
+            viewModel?.viewModelScope?.cancel()
             Dispatchers.resetMain()
         }
     }
