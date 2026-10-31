@@ -72,6 +72,9 @@ fun BrowserScreen(
     val context = LocalContext.current
     val currentIsPrivateTab by rememberUpdatedState(isPrivateTab)
     val currentDownloadHandler by rememberUpdatedState(onDownloadRequested)
+    val currentUrlChangeHandler by rememberUpdatedState(onUrlChanged)
+    val currentTitleChangeHandler by rememberUpdatedState(onTitleChanged)
+    val currentPageVisitedHandler by rememberUpdatedState(onPageVisited)
     var addressText by remember { mutableStateOf(initialUrl) }
     var pageTitle by remember { mutableStateOf("New tab") }
     var progress by remember { mutableStateOf(0) }
@@ -84,10 +87,11 @@ fun BrowserScreen(
     // A tab switch can change initialUrl while this composable stays in place.
     // Load the selected tab's URL without reloading the page currently navigating.
     LaunchedEffect(initialUrl) {
-        val currentUrl = browserEngine?.currentUrl
-        if (!initialUrl.isNullOrBlank() && browserEngine != null && currentUrl != initialUrl) {
-            addressText = initialUrl
-            browserEngine?.loadUrl(initialUrl)
+        val targetUrl = resolveAddress(initialUrl)
+        val engine = browserEngine
+        if (engine != null && engine.currentUrl != targetUrl) {
+            addressText = targetUrl
+            engine.loadUrl(targetUrl)
         }
     }
 
@@ -177,7 +181,8 @@ fun BrowserScreen(
                 .weight(1f),
             factory = {
                 WebView(context).apply {
-                    browserEngine = WebViewBrowserEngine(this)
+                    val engine = WebViewBrowserEngine(this)
+                    browserEngine = engine
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
@@ -206,7 +211,7 @@ fun BrowserScreen(
                             super.onPageStarted(view, url, favicon)
                             if (!url.isNullOrBlank()) {
                                 addressText = url
-                                onUrlChanged(url)
+                                currentUrlChangeHandler(url)
                             }
                             pageError = null
                             progress = 0
@@ -217,8 +222,8 @@ fun BrowserScreen(
                             super.onPageFinished(view, url)
                             if (!url.isNullOrBlank()) addressText = url
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
-                            onTitleChanged(pageTitle)
-                            onPageVisited(url ?: addressText, pageTitle)
+                            currentTitleChangeHandler(pageTitle)
+                            currentPageVisitedHandler(url ?: addressText, pageTitle)
                             progress = 100
                             isLoading = false
                             canGoBack = view?.canGoBack() == true
@@ -254,16 +259,13 @@ fun BrowserScreen(
                         override fun onReceivedTitle(view: WebView?, title: String?) {
                             if (!title.isNullOrBlank()) {
                                 pageTitle = title
-                                onTitleChanged(title)
+                                currentTitleChangeHandler(title)
                             }
                         }
                     }
 
-                    loadUrl(resolveAddress(initialUrl))
+                    engine.loadUrl(resolveAddress(initialUrl))
                 }
-            },
-            update = { view ->
-                if (browserEngine == null) browserEngine = WebViewBrowserEngine(view)
             }
         )
 
