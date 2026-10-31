@@ -38,9 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,16 +48,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nextbrowser.data.local.BrowserSessionStore
 import com.nextbrowser.data.local.BookmarkEntity
 import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.model.BrowserTab
+import com.nextbrowser.ui.screens.browser.BrowserTabsViewModel
 import com.nextbrowser.ui.screens.browser.BrowserScreen
 import com.nextbrowser.ui.screens.home.HomeScreen
 import com.nextbrowser.ui.screens.downloads.DownloadsDialog
 import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
-import java.util.UUID
 import dagger.hilt.android.AndroidEntryPoint
 import com.nextbrowser.ui.settings.BrowserSettingsViewModel
 import com.nextbrowser.ui.screens.library.BrowserLibraryViewModel
@@ -71,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 class MainActivity : ComponentActivity() {
     private val settingsViewModel: BrowserSettingsViewModel by viewModels()
     private val libraryViewModel: BrowserLibraryViewModel by viewModels()
+    private val tabsViewModel: BrowserTabsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 accentColor = accentColor
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    NextBrowserApp(libraryViewModel)
+                    NextBrowserApp(libraryViewModel, tabsViewModel)
                 }
             }
         }
@@ -98,45 +96,22 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NextBrowserApp(libraryViewModel: BrowserLibraryViewModel) {
+private fun NextBrowserApp(
+    libraryViewModel: BrowserLibraryViewModel,
+    tabsViewModel: BrowserTabsViewModel
+) {
     val context = LocalContext.current
     var libraryMode by remember { mutableStateOf<String?>(null) }
-    val restored = remember { BrowserSessionStore.restore(context) }
-    val tabs = remember {
-        mutableStateListOf<BrowserTab>().apply {
-            addAll(restored.first)
-            if (isEmpty()) add(BrowserTab(id = UUID.randomUUID().toString()))
-        }
-    }
-    var activeTabId by remember {
-        mutableStateOf(restored.second?.takeIf { id -> tabs.any { it.id == id } } ?: tabs.first().id)
-    }
+    val tabs by tabsViewModel.tabs.collectAsState()
+    val activeTabId by tabsViewModel.activeTabId.collectAsState()
     var showTabSwitcher by remember { mutableStateOf(false) }
     var showDownloadsDialog by remember { mutableStateOf(false) }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
-    SideEffect { BrowserSessionStore.save(context, tabs, activeTabId) }
-
-    fun createTab(isPrivate: Boolean = false) {
-        val tab = BrowserTab(id = UUID.randomUUID().toString(), title = if (isPrivate) "Private tab" else "New tab", isPrivate = isPrivate)
-        tabs.add(tab)
-        activeTabId = tab.id
-        showTabSwitcher = false
-    }
-
-    fun closeTab(tabId: String) {
-        val index = tabs.indexOfFirst { it.id == tabId }
-        if (index == -1) return
-        tabs.removeAt(index)
-        if (tabs.isEmpty()) createTab()
-        else if (activeTabId == tabId) activeTabId = tabs[(index - 1).coerceAtLeast(0).coerceAtMost(tabs.lastIndex)].id
-    }
-
     if (activeTab.url.isNullOrBlank()) {
         HomeScreen(
             onSearch = { query ->
-                val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0) tabs[index] = tabs[index].copy(url = query)
+                tabsViewModel.updateTab(activeTab.id) { it.copy(url = query) }
             },
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
@@ -147,19 +122,20 @@ private fun NextBrowserApp(libraryViewModel: BrowserLibraryViewModel) {
         BrowserScreen(
             initialUrl = activeTab.url.orEmpty(),
             onGoHome = {
-                val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0) tabs[index] = tabs[index].copy(url = null, title = "New tab")
+                tabsViewModel.updateTab(activeTab.id) { it.copy(url = null, title = "New tab") }
             },
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
             isPrivateTab = activeTab.isPrivate,
             onUrlChanged = { url ->
-                val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0 && tabs[index].url != url) tabs[index] = tabs[index].copy(url = url)
+                tabsViewModel.updateTab(activeTab.id) { tab ->
+                    if (tab.url == url) tab else tab.copy(url = url)
+                }
             },
             onTitleChanged = { title ->
-                val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0 && tabs[index].title != title) tabs[index] = tabs[index].copy(title = title)
+                tabsViewModel.updateTab(activeTab.id) { tab ->
+                    if (tab.title == title) tab else tab.copy(title = title)
+                }
             },
             onPageVisited = { url, title ->
                 if (!activeTab.isPrivate && url.startsWith("http")) {
@@ -204,8 +180,7 @@ private fun NextBrowserApp(libraryViewModel: BrowserLibraryViewModel) {
             viewModel = libraryViewModel,
             showBookmarks = libraryMode == "bookmarks",
             onOpenUrl = { url ->
-                val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0) tabs[index] = tabs[index].copy(url = url)
+                tabsViewModel.updateTab(activeTab.id) { it.copy(url = url) }
                 libraryMode = null
             },
             onDismiss = { libraryMode = null }
@@ -219,10 +194,10 @@ private fun NextBrowserApp(libraryViewModel: BrowserLibraryViewModel) {
     if (showTabSwitcher) {
         TabSwitcherDialog(
             tabs = tabs, activeTabId = activeTabId,
-            onSelect = { activeTabId = it; showTabSwitcher = false },
-            onClose = ::closeTab,
-            onNewTab = { createTab() },
-            onNewPrivateTab = { createTab(isPrivate = true) },
+            onSelect = { tabsViewModel.selectTab(it); showTabSwitcher = false },
+            onClose = tabsViewModel::closeTab,
+            onNewTab = { tabsViewModel.createTab(); showTabSwitcher = false },
+            onNewPrivateTab = { tabsViewModel.createTab(isPrivate = true); showTabSwitcher = false },
             onDismiss = { showTabSwitcher = false }
         )
     }
