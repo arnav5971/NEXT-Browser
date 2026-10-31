@@ -439,8 +439,8 @@ internal fun resolveAddress(
     // Local development endpoints commonly do not provide TLS certificates.
     val isLocalHost = value.equals("localhost", ignoreCase = true) ||
         value.startsWith("localhost:", ignoreCase = true) ||
-        value.startsWith("127.0.0.1") ||
-        value.startsWith("10.0.2.2")
+        value.equals("10.0.2.2", ignoreCase = true) ||
+        value.startsWith("10.0.2.2:", ignoreCase = true)
     val looksLikeHost = !value.contains(" ") &&
         (isLocalHost || HOST_WITH_OPTIONAL_PORT.matches(value))
 
