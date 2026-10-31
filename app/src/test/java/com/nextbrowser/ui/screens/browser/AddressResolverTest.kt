@@ -28,4 +28,32 @@ class AddressResolverTest {
     fun searchSpacesAreEncoded() {
         assertEquals("https://www.google.com/search?q=weather%20today", resolveAddress("weather today"))
     }
+    @Test
+    fun inputIsTrimmedBeforeResolution() {
+        assertEquals("https://example.com", resolveAddress("  example.com  "))
+    }
+
+    @Test
+    fun uppercaseHttpsSchemeIsPreserved() {
+        assertEquals("HTTPS://example.com/path", resolveAddress("HTTPS://example.com/path"))
+    }
+
+    @Test
+    fun localhostIsTreatedAsAHost() {
+        assertEquals("https://localhost", resolveAddress("localhost"))
+    }
+
+    @Test
+    fun dottedIpAddressIsTreatedAsAHost() {
+        assertEquals("https://127.0.0.1", resolveAddress("127.0.0.1"))
+    }
+
+    @Test
+    fun reservedSearchCharactersAreEncoded() {
+        assertEquals(
+            "https://www.google.com/search?q=cats%20%26%20dogs",
+            resolveAddress("cats & dogs")
+        )
+    }
+
 }
