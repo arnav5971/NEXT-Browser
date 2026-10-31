@@ -100,13 +100,16 @@ fun BrowserScreen(
         }
     }
 
-    // A stalled main-frame request must not leave the browser in an endless loading state.
-    LaunchedEffect(initialUrl) {
-        delay(25_000)
-        if (isLoading) {
-            browserEngine?.stopLoading()
-            pageError = "This page did not finish loading within 25 seconds. Check your internet connection or try again."
-            isLoading = false
+    // One watchdog per actual loading attempt. It is cancelled when loading ends
+    // and restarted when the address or loading state changes.
+    LaunchedEffect(isLoading, addressText) {
+        if (isLoading && addressText.isNotBlank() && pageError == null) {
+            delay(25_000)
+            if (isLoading && pageError == null) {
+                pageError = "The page is taking too long to respond. Check your connection and tap Reload."
+                isLoading = false
+                browserEngine?.stopLoading()
+            }
         }
     }
 
@@ -254,6 +257,7 @@ fun BrowserScreen(
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             if (!url.isNullOrBlank()) addressText = url
+                            pageError = null
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
                             currentTitleChangeHandler(pageTitle)
                             currentPageVisitedHandler(url ?: addressText, pageTitle)
@@ -316,7 +320,10 @@ fun BrowserScreen(
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             progress = newProgress
-                            isLoading = newProgress < 100
+                            // Do not let late progress callbacks undo a terminal load error.
+                            if (pageError == null) {
+                                isLoading = newProgress < 100
+                            }
                         }
 
                         override fun onReceivedTitle(view: WebView?, title: String?) {
