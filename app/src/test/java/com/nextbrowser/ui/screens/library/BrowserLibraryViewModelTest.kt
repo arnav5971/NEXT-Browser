@@ -1,6 +1,5 @@
 package com.nextbrowser.ui.screens.library
 
-import androidx.lifecycle.ViewModel
 import com.nextbrowser.data.local.BookmarkEntity
 import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.repository.BrowserLibraryRepository
