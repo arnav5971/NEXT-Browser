@@ -29,6 +29,9 @@ interface BrowserLibraryDao {
     @Query("SELECT * FROM history ORDER BY visitedAt DESC LIMIT :limit")
     fun observeRecentHistory(limit: Int = 200): Flow<List<HistoryEntity>>
 
+    @Query("DELETE FROM history WHERE id = :id")
+    suspend fun removeHistoryEntry(id: String)
+
     @Query("DELETE FROM history")
     suspend fun clearHistory()
 
