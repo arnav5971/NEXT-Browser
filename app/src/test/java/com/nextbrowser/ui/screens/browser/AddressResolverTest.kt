@@ -23,4 +23,9 @@ class AddressResolverTest {
     fun plainSearchTextUsesSearchProvider() {
         assertEquals("https://www.google.com/search?q=weather", resolveAddress("weather"))
     }
+
+    @Test
+    fun searchSpacesAreEncoded() {
+        assertEquals("https://www.google.com/search?q=weather%20today", resolveAddress("weather today"))
+    }
 }
