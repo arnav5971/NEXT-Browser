@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.net.URLEncoder
+import kotlinx.coroutines.delay
 import com.nextbrowser.data.engine.WebViewBrowserEngine
 import com.nextbrowser.domain.engine.BrowserEngine
 
@@ -96,6 +97,16 @@ fun BrowserScreen(
         if (engine != null && engine.currentUrl != targetUrl) {
             addressText = targetUrl
             engine.loadUrl(targetUrl)
+        }
+    }
+
+    // A stalled main-frame request must not leave the browser in an endless loading state.
+    LaunchedEffect(initialUrl) {
+        delay(25_000)
+        if (isLoading) {
+            browserEngine?.stopLoading()
+            pageError = "This page did not finish loading within 25 seconds. Check your internet connection or try again."
+            isLoading = false
         }
     }
 
@@ -229,6 +240,15 @@ fun BrowserScreen(
                             pageError = null
                             progress = 0
                             isLoading = true
+                        }
+
+                        override fun onPageCommitVisible(view: WebView?, url: String?) {
+                            super.onPageCommitVisible(view, url)
+                            // The main document has started rendering; avoid a stale loading indicator.
+                            if (!url.isNullOrBlank()) {
+                                addressText = url
+                                currentUrlChangeHandler(url)
+                            }
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
