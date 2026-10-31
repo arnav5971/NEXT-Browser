@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -61,19 +60,17 @@ import com.nextbrowser.ui.screens.downloads.DownloadsDialog
 import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
 import java.util.UUID
-import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
 import com.nextbrowser.ui.settings.BrowserSettingsViewModel
+import com.nextbrowser.ui.screens.library.BrowserLibraryViewModel
 import com.nextbrowser.domain.model.BrowserSettings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
-import javax.inject.Inject
-import com.nextbrowser.domain.repository.BrowserLibraryRepository
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject lateinit var browserLibraryRepository: BrowserLibraryRepository
     private val settingsViewModel: BrowserSettingsViewModel by viewModels()
+    private val libraryViewModel: BrowserLibraryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,7 +90,7 @@ class MainActivity : ComponentActivity() {
                 accentColor = accentColor
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    NextBrowserApp(browserLibraryRepository)
+                    NextBrowserApp(libraryViewModel)
                 }
             }
         }
@@ -101,9 +98,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NextBrowserApp(repository: BrowserLibraryRepository) {
+private fun NextBrowserApp(libraryViewModel: BrowserLibraryViewModel) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var libraryMode by remember { mutableStateOf<String?>(null) }
     val restored = remember { BrowserSessionStore.restore(context) }
     val tabs = remember {
@@ -167,12 +163,12 @@ private fun NextBrowserApp(repository: BrowserLibraryRepository) {
             },
             onPageVisited = { url, title ->
                 if (!activeTab.isPrivate && url.startsWith("http")) {
-                    scope.launch { repository.addHistory(HistoryEntity(id = UUID.randomUUID().toString(), title = title, url = url)) }
+                    libraryViewModel.addHistory(HistoryEntity(id = UUID.randomUUID().toString(), title = title, url = url))
                 }
             },
             onAddBookmark = { url, title ->
                 if (!activeTab.isPrivate && url.startsWith("http")) {
-                    scope.launch { repository.addBookmark(BookmarkEntity(id = UUID.randomUUID().toString(), title = title.ifBlank { url }, url = url)) }
+                    libraryViewModel.addBookmark(BookmarkEntity(id = UUID.randomUUID().toString(), title = title.ifBlank { url }, url = url))
                 }
             },
             onDownloadRequested = { url, userAgent, contentDisposition, mimeType, _ ->
@@ -205,15 +201,13 @@ private fun NextBrowserApp(repository: BrowserLibraryRepository) {
 
     if (libraryMode != null) {
         LibraryDialog(
-            repository = repository,
+            viewModel = libraryViewModel,
             showBookmarks = libraryMode == "bookmarks",
             onOpenUrl = { url ->
                 val index = tabs.indexOfFirst { it.id == activeTab.id }
                 if (index >= 0) tabs[index] = tabs[index].copy(url = url)
                 libraryMode = null
             },
-            onDeleteBookmark = { id -> scope.launch { repository.removeBookmark(id) } },
-            onClearHistory = { scope.launch { repository.clearHistory() } },
             onDismiss = { libraryMode = null }
         )
     }
