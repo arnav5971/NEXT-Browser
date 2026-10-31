@@ -27,47 +27,87 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.setValue\n
 
 @Composable
-fun LibraryDialog(repository: BrowserLibraryRepository, showBookmarks: Boolean, onOpenUrl: (String) -> Unit, onDeleteBookmark: (String) -> Unit, onClearHistory: () -> Unit, onDismiss: () -> Unit) {
-    var query by remember { mutableStateOf("") }
+fun LibraryDialog(
+    viewModel: BrowserLibraryViewModel,
+    showBookmarks: Boolean,
+    onOpenUrl: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val query by viewModel.searchQuery.collectAsState()
+    val bookmarks by viewModel.bookmarks.collectAsState()
+    val history by viewModel.history.collectAsState()
     var confirmClear by remember { mutableStateOf(false) }
-    val bookmarks by (if (query.isBlank()) repository.observeBookmarks() else repository.searchBookmarks(query)).collectAsState(initial = emptyList())
-    val history by (if (query.isBlank()) repository.observeRecentHistory() else repository.searchHistory(query)).collectAsState(initial = emptyList())
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (showBookmarks) "Bookmarks" else "History") },
         text = {
             Column {
-                OutlinedTextField(value = query, onValueChange = viewModel::updateSearchQuery, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(if (showBookmarks) "Search bookmarks" else "Search history") })
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = viewModel::updateSearchQuery,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(if (showBookmarks) "Search bookmarks" else "Search history") }
+                )
                 LazyColumn(modifier = Modifier.padding(top = 8.dp)) {
                     if (showBookmarks) {
                         items(bookmarks, key = { it.id }) { item ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { onOpenUrl(item.url) }.padding(vertical = 9.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f).clickable { onOpenUrl(item.url) }
+                                ) {
                                     Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text(item.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    if (!item.folder.isNullOrBlank()) Text(item.folder, style = MaterialTheme.typography.labelSmall)
+                                    if (!item.folder.isNullOrBlank()) {
+                                        Text(item.folder, style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
-                                IconButton(onClick = { viewModel.deleteBookmark(item.id) }) { Icon(Icons.Default.Delete, contentDescription = "Delete bookmark") }
+                                IconButton(onClick = { viewModel.deleteBookmark(item.id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete bookmark")
+                                }
                             }
                         }
                     } else {
                         items(history, key = { it.id }) { item ->
-                            Column(modifier = Modifier.fillMaxWidth().clickable { onOpenUrl(item.url) }.padding(vertical = 9.dp)) {
-                                Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(item.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(item.visitedAt)), style = MaterialTheme.typography.labelSmall)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f).clickable { onOpenUrl(item.url) }
+                                ) {
+                                    Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(item.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        java.text.DateFormat.getDateTimeInstance().format(java.util.Date(item.visitedAt)),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                                IconButton(onClick = { viewModel.deleteHistoryEntry(item.id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete history entry")
+                                }
                             }
                         }
                     }
                 }
             }
         },
-        confirmButton = { if (!showBookmarks) TextButton(onClick = { confirmClear = true }) { Text("Clear history") } else TextButton(onClick = onDismiss) { Text("Done") } },
+        confirmButton = {
+            if (!showBookmarks) {
+                TextButton(onClick = { confirmClear = true }) { Text("Clear history") }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Done") }
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
     )
+
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
@@ -75,7 +115,7 @@ fun LibraryDialog(repository: BrowserLibraryRepository, showBookmarks: Boolean, 
             text = { Text("This permanently deletes all saved browsing history. Bookmarks will remain.") },
             confirmButton = {
                 Button(onClick = {
-                    onClearHistory()
+                    viewModel.clearHistory()
                     confirmClear = false
                 }) { Text("Clear") }
             },
