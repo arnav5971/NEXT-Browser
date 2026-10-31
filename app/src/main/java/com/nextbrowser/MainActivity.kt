@@ -3,17 +3,48 @@ package com.nextbrowser
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Tab
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.nextbrowser.domain.model.BrowserTab
 import com.nextbrowser.ui.screens.browser.BrowserScreen
 import com.nextbrowser.ui.screens.home.HomeScreen
 import com.nextbrowser.ui.theme.NextBrowserTheme
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,7 +52,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             NextBrowserTheme {
                 Surface(
-                    modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     NextBrowserApp()
@@ -33,16 +64,181 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun NextBrowserApp() {
-    var activeUrl by remember { mutableStateOf<String?>(null) }
+    val tabs = remember {
+        mutableStateListOf(BrowserTab(id = UUID.randomUUID().toString()))
+    }
+    var activeTabId by remember { mutableStateOf(tabs.first().id) }
+    var showTabSwitcher by remember { mutableStateOf(false) }
+    val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
-    if (activeUrl == null) {
+    fun createTab(isPrivate: Boolean = false) {
+        val tab = BrowserTab(
+            id = UUID.randomUUID().toString(),
+            title = if (isPrivate) "Private tab" else "New tab",
+            isPrivate = isPrivate
+        )
+        tabs.add(tab)
+        activeTabId = tab.id
+        showTabSwitcher = false
+    }
+
+    fun closeTab(tabId: String) {
+        val index = tabs.indexOfFirst { it.id == tabId }
+        if (index == -1) return
+        tabs.removeAt(index)
+        if (tabs.isEmpty()) {
+            createTab()
+        } else if (activeTabId == tabId) {
+            activeTabId = tabs[(index - 1).coerceAtLeast(0).coerceAtMost(tabs.lastIndex)].id
+        }
+    }
+
+    if (activeTab.url.isNullOrBlank()) {
         HomeScreen(
-            onSearch = { query -> activeUrl = query }
+            onSearch = { query ->
+                val index = tabs.indexOfFirst { it.id == activeTab.id }
+                if (index >= 0) tabs[index] = tabs[index].copy(url = query)
+            },
+            onShowTabs = { showTabSwitcher = true },
+            tabCount = tabs.size
         )
     } else {
         BrowserScreen(
-            initialUrl = activeUrl.orEmpty(),
-            onGoHome = { activeUrl = null }
+            initialUrl = activeTab.url.orEmpty(),
+            onGoHome = {
+                val index = tabs.indexOfFirst { it.id == activeTab.id }
+                if (index >= 0) tabs[index] = tabs[index].copy(url = null, title = "New tab")
+            },
+            onShowTabs = { showTabSwitcher = true },
+            tabCount = tabs.size,
+            isPrivateTab = activeTab.isPrivate,
+            onUrlChanged = { url ->
+                val index = tabs.indexOfFirst { it.id == activeTab.id }
+                if (index >= 0 && tabs[index].url != url) {
+                    tabs[index] = tabs[index].copy(url = url)
+                }
+            },
+            onTitleChanged = { title ->
+                val index = tabs.indexOfFirst { it.id == activeTab.id }
+                if (index >= 0 && tabs[index].title != title) {
+                    tabs[index] = tabs[index].copy(title = title)
+                }
+            }
         )
     }
+
+    if (showTabSwitcher) {
+        TabSwitcherDialog(
+            tabs = tabs,
+            activeTabId = activeTabId,
+            onSelect = { tabId ->
+                activeTabId = tabId
+                showTabSwitcher = false
+            },
+            onClose = ::closeTab,
+            onNewTab = { createTab() },
+            onNewPrivateTab = { createTab(isPrivate = true) },
+            onDismiss = { showTabSwitcher = false }
+        )
+    }
+}
+
+@Composable
+private fun TabSwitcherDialog(
+    tabs: List<BrowserTab>,
+    activeTabId: String,
+    onSelect: (String) -> Unit,
+    onClose: (String) -> Unit,
+    onNewTab: () -> Unit,
+    onNewPrivateTab: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Tabs (${tabs.size})")
+                Icon(Icons.Default.Tab, contentDescription = null)
+            }
+        },
+        text = {
+            Column {
+                LazyColumn {
+                    items(tabs, key = { it.id }) { tab ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onSelect(tab.id) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (tab.id == activeTabId) {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                }
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (tab.isPrivate) Icons.Default.Lock else Icons.Default.Language,
+                                    contentDescription = if (tab.isPrivate) "Private tab" else "Tab"
+                                )
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 10.dp)
+                                ) {
+                                    Text(
+                                        text = tab.title,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = if (tab.isPrivate) "Private session" else tab.url ?: "Start page",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                IconButton(onClick = { onClose(tab.id) }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Close tab")
+                                }
+                            }
+                        }
+                    }
+                }
+                Text(
+                    text = "Private tabs are temporary in this phase. Separate cookie/storage isolation and full session restoration are not implemented yet.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onNewPrivateTab) {
+                    Icon(Icons.Default.Lock, contentDescription = null)
+                    Text(" Private")
+                }
+                Button(onClick = onNewTab) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text(" New tab")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+    )
 }
