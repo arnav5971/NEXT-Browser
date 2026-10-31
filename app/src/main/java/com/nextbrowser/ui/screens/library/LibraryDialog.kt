@@ -27,14 +27,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nextbrowser.data.local.BrowserLibraryDao
+import com.nextbrowser.domain.repository.BrowserLibraryRepository
 
 @Composable
-fun LibraryDialog(dao: BrowserLibraryDao, showBookmarks: Boolean, onOpenUrl: (String) -> Unit, onDeleteBookmark: (String) -> Unit, onClearHistory: () -> Unit, onDismiss: () -> Unit) {
+fun LibraryDialog(repository: BrowserLibraryRepository, showBookmarks: Boolean, onOpenUrl: (String) -> Unit, onDeleteBookmark: (String) -> Unit, onClearHistory: () -> Unit, onDismiss: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
-    val bookmarks by (if (query.isBlank()) dao.observeBookmarks() else dao.searchBookmarks(query)).collectAsState(initial = emptyList())
-    val history by (if (query.isBlank()) dao.observeRecentHistory() else dao.searchHistory(query)).collectAsState(initial = emptyList())
+    val bookmarks by (if (query.isBlank()) repository.observeBookmarks() else repository.searchBookmarks(query)).collectAsState(initial = emptyList())
+    val history by (if (query.isBlank()) repository.observeRecentHistory() else repository.searchHistory(query)).collectAsState(initial = emptyList())
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (showBookmarks) "Bookmarks" else "History") },
