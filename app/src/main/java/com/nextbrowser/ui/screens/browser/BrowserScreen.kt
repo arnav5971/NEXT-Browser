@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +72,16 @@ fun BrowserScreen(
     var canGoForward by remember { mutableStateOf(false) }
     var pageError by remember { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<WebView?>(null) }
+
+    // A tab switch can change initialUrl while this composable stays in place.
+    // Load the selected tab's URL without reloading the page currently navigating.
+    LaunchedEffect(initialUrl) {
+        val view = webView
+        if (!initialUrl.isNullOrBlank() && view != null && view.url != initialUrl) {
+            addressText = initialUrl
+            view.loadUrl(initialUrl)
+        }
+    }
 
     fun navigate(rawInput: String) {
         val target = resolveAddress(rawInput)
@@ -135,7 +146,7 @@ fun BrowserScreen(
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Go")
             }
-            IconButton(onClick = { onAddBookmark(addressText, pageTitle) }, enabled = addressText.isNotBlank() && !isPrivateTab) {
+            IconButton(onClick = { webView?.url?.let { onAddBookmark(it, pageTitle) } }, enabled = webView?.url?.startsWith("http") == true && !isPrivateTab) {
                 Icon(Icons.Default.BookmarkAdd, contentDescription = if (isPrivateTab) "Bookmarks unavailable in private tabs" else "Add bookmark")
             }
             IconButton(onClick = onShowTabs) {
@@ -311,7 +322,7 @@ private fun resolveAddress(input: String): String {
     if (value.isEmpty()) return "https://www.google.com"
 
     val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(value)
-    if (hasScheme) return value
+    if (value.startsWith("https://", ignoreCase = true) || value.startsWith("http://", ignoreCase = true)) return value
 
     val looksLikeHost = !value.contains(" ") &&
         (value == "localhost" || value.contains(".") || value.startsWith("127.0.0.1"))
