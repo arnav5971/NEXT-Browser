@@ -5,7 +5,7 @@ NEXT Browser is an Android browser project focused on a premium, minimal experie
 
 ## Current implementation
 
-**Phase 5 — personal library foundation (build verification pending)**
+**Phase 6 — downloads foundation (CI build verified; device testing pending)**
 
 - [x] Kotlin Android application foundation with Jetpack Compose and Material 3
 - [x] Android System WebView-based browsing, address/search, navigation controls and basic security settings
@@ -15,9 +15,14 @@ NEXT Browser is an Android browser project focused on a premium, minimal experie
 - [x] Browse, search and delete bookmarks
 - [x] Record successful page visits from regular tabs; private-labelled tabs are excluded
 - [x] Browse/search history and clear all history
+- [x] Native Android DownloadManager integration for HTTP(S) downloads
+- [x] Download completion notifications and in-app download list with progress/status
+- [x] Open completed downloads and cancel/remove unfinished or failed items
 - [ ] Bookmark folder creation, rename and move UI
 - [ ] History date filters and per-entry deletion
 - [ ] Independent retained WebView instances and isolated private storage
+- [ ] Pause/resume controls (Android DownloadManager does not expose a public pause/resume API)
+- [ ] Media playback enhancements and picture-in-picture
 
 ### Important limitations
 
@@ -25,7 +30,9 @@ NEXT Browser is an Android browser project focused on a premium, minimal experie
 - Regular-tab session restoration reloads saved URLs; it does not preserve live page state or full back/forward history.
 - Private-labelled tabs are not persisted and do not write to browsing history or bookmarks through the current browser UI, but their cookies/cache/DOM storage are **not isolated** from regular tabs.
 - Bookmark folder metadata is represented in the database, but folder management controls are not yet available.
-- No Android Gradle build or device test has been recorded for Phase 5.
+- Phase 5 and the first Phase 6 downloads implementation pass the GitHub Actions Gradle configuration, unit-test task, and debug APK build. Physical-device download behavior still needs testing.
+- Android DownloadManager owns transfer execution and system notifications; the app does not currently expose pause/resume controls.
+- Downloads are disabled from private-labelled tabs because system downloads are persisted by Android and the current private mode is not storage-isolated.
 
 ## Technology
 
