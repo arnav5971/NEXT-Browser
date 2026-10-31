@@ -61,6 +61,7 @@ import com.nextbrowser.ui.theme.NextBrowserTheme
 import java.util.UUID
 import dagger.hilt.android.AndroidEntryPoint
 import com.nextbrowser.ui.settings.BrowserSettingsViewModel
+import com.nextbrowser.ui.settings.BrowserSettingsDialog
 import com.nextbrowser.ui.screens.library.BrowserLibraryViewModel
 import com.nextbrowser.domain.model.BrowserSettings
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -110,6 +111,7 @@ private fun NextBrowserApp(
     val activeTabId by tabsViewModel.activeTabId.collectAsState()
     var showTabSwitcher by remember { mutableStateOf(false) }
     var showDownloadsDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
     if (activeTab.url.isNullOrBlank()) {
@@ -120,7 +122,8 @@ private fun NextBrowserApp(
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
             onShowBookmarks = { libraryMode = "bookmarks" },
-            onShowHistory = { libraryMode = "history" }
+            onShowHistory = { libraryMode = "history" },
+            onShowSettings = { showSettingsDialog = true }
         )
     } else {
         key(activeTab.id) {
@@ -200,6 +203,16 @@ private fun NextBrowserApp(
 
     if (showDownloadsDialog) {
         DownloadsDialog(onDismiss = { showDownloadsDialog = false })
+    }
+
+    if (showSettingsDialog) {
+        BrowserSettingsDialog(
+            settings = browserSettings,
+            onThemeChange = settingsViewModel::setThemeMode,
+            onSearchEngineChange = settingsViewModel::setSearchEngine,
+            onDynamicColorChange = settingsViewModel::setDynamicColorEnabled,
+            onDismiss = { showSettingsDialog = false }
+        )
     }
 
     if (showTabSwitcher) {
