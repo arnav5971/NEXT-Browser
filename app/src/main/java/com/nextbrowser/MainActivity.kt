@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
                 accentColor = accentColor
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    NextBrowserApp(libraryViewModel, tabsViewModel)
+                    NextBrowserApp(libraryViewModel, tabsViewModel, settingsViewModel)
                 }
             }
         }
@@ -100,10 +100,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun NextBrowserApp(
     libraryViewModel: BrowserLibraryViewModel,
-    tabsViewModel: BrowserTabsViewModel
+    tabsViewModel: BrowserTabsViewModel,
+    settingsViewModel: BrowserSettingsViewModel
 ) {
     val context = LocalContext.current
     var libraryMode by remember { mutableStateOf<String?>(null) }
+    val browserSettings by settingsViewModel.settings.collectAsState()
     val tabs by tabsViewModel.tabs.collectAsState()
     val activeTabId by tabsViewModel.activeTabId.collectAsState()
     var showTabSwitcher by remember { mutableStateOf(false) }
@@ -124,6 +126,7 @@ private fun NextBrowserApp(
         key(activeTab.id) {
         BrowserScreen(
             initialUrl = activeTab.url.orEmpty(),
+            searchEngine = browserSettings.searchEngine,
             onGoHome = {
                 tabsViewModel.updateTab(activeTab.id) { it.copy(url = null, title = "New tab") }
             },
