@@ -12,7 +12,8 @@ import org.junit.Test
 class DefaultBrowserSettingsRepositoryTest {
 
     @Test
-    fun persistsAndEmitsBrowserSettings() = runBlocking {
+    fun persistsAndEmitsBrowserSettings() {
+        runBlocking {
         val file = File.createTempFile("next-browser-settings", ".preferences_pb")
         file.delete()
         val dataStore = PreferenceDataStoreFactory.create(produceFile = { file })
@@ -31,6 +32,7 @@ class DefaultBrowserSettingsRepositoryTest {
         assertEquals(BrowserSettings.SEARCH_ENGINE_DUCKDUCKGO, actual.searchEngine)
 
         file.delete()
+        }
     }
 
     @Test
