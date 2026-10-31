@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Home
@@ -62,7 +63,9 @@ fun BrowserScreen(
     onUrlChanged: (String) -> Unit,
     onTitleChanged: (String) -> Unit,
     onPageVisited: (String, String) -> Unit,
-    onAddBookmark: (String, String) -> Unit
+    onAddBookmark: (String, String) -> Unit,
+    onDownloadRequested: (String, String?, String?, String?, Long) -> Unit,
+    onShowDownloads: () -> Unit
 ) {
     val context = LocalContext.current
     var addressText by remember { mutableStateOf(initialUrl) }
@@ -237,6 +240,12 @@ fun BrowserScreen(
                         }
                     }
 
+                    setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+                        if (url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)) {
+                            if (!isPrivateTab) onDownloadRequested(url, userAgent, contentDisposition, mimeType, contentLength)
+                        }
+                    }
+
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             progress = newProgress
@@ -304,6 +313,9 @@ fun BrowserScreen(
                     }
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = "Reload")
+                }
+                IconButton(onClick = onShowDownloads, enabled = !isPrivateTab) {
+                    Icon(Icons.Default.Download, contentDescription = if (isPrivateTab) "Downloads unavailable in private tabs" else "Downloads")
                 }
                 Text(
                     text = pageTitle,
