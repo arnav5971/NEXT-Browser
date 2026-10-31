@@ -1,5 +1,6 @@
 package com.nextbrowser.ui.screens.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,7 +55,9 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     onSearch: (String) -> Unit,
     onShowTabs: () -> Unit,
-    tabCount: Int
+    tabCount: Int,
+    onShowBookmarks: () -> Unit,
+    onShowHistory: () -> Unit
 ) {
     var searchText by remember { mutableStateOf("") }
 
@@ -150,8 +153,8 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickAccessTile(Modifier.weight(1f), Icons.Default.BookmarkBorder, "Bookmarks")
-            QuickAccessTile(Modifier.weight(1f), Icons.Default.History, "History")
+            QuickAccessTile(Modifier.weight(1f), Icons.Default.BookmarkBorder, "Bookmarks", onShowBookmarks)
+            QuickAccessTile(Modifier.weight(1f), Icons.Default.History, "History", onShowHistory)
             QuickAccessTile(Modifier.weight(1f), Icons.Default.Settings, "Settings")
         }
 
@@ -222,10 +225,11 @@ fun HomeScreen(
 private fun QuickAccessTile(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String
+    label: String,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.height(94.dp),
+        modifier = modifier.height(94.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
