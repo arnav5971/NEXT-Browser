@@ -57,6 +57,7 @@ import com.nextbrowser.ui.screens.home.HomeScreen
 import com.nextbrowser.ui.screens.downloads.DownloadsDialog
 import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
+import java.util.UUID
 import dagger.hilt.android.AndroidEntryPoint
 import com.nextbrowser.ui.settings.BrowserSettingsViewModel
 import com.nextbrowser.ui.screens.library.BrowserLibraryViewModel
