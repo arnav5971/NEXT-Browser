@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -120,6 +121,7 @@ private fun NextBrowserApp(
             onShowHistory = { libraryMode = "history" }
         )
     } else {
+        key(activeTab.id) {
         BrowserScreen(
             initialUrl = activeTab.url.orEmpty(),
             onGoHome = {
@@ -172,8 +174,13 @@ private fun NextBrowserApp(
                     Toast.makeText(context, "Could not start download", Toast.LENGTH_SHORT).show()
                 }
             },
-            onShowDownloads = { showDownloadsDialog = true }
+            onShowDownloads = { showDownloadsDialog = true },
+            savedWebViewState = tabsViewModel.webViewState(activeTab.id, activeTab.url),
+            onSaveWebViewState = { state, url ->
+                tabsViewModel.saveWebViewState(activeTab.id, state, url)
+            }
         )
+        }
     }
 
     if (libraryMode != null) {
