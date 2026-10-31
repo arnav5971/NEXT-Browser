@@ -1,40 +1,35 @@
 # NEXT Browser — Development Roadmap
 
 ## Phase 1: Foundation
-- Android project configuration
-- Compose design system and home screen shell
-- Light/dark system theme
+- Android project configuration, Compose design system and theme
 
 ## Phase 2: First browsing experience
-- Android System WebView adapter and address navigation
-- Search fallback, loading progress, title, back/forward and reload
-- Basic WebView security configuration
+- Android System WebView, search/address navigation and basic browser controls
 
 ## Phase 3: Tab management foundation
-- In-memory tab model, tab switcher, create and close actions
-- Temporary private-labelled tabs
-- Per-tab WebView instances and isolated private storage remain future work
+- In-memory tabs, tab switcher, create and close actions
 
-## Phase 4: Regular session persistence (implementation added; build verification pending)
-- Restore regular tab metadata (tab ID, last URL and title) after app restart
-- Restore the previously active regular tab
-- Exclude private-labelled tabs from persisted session metadata
-- Private-labelled tabs are discarded on process restart
-- Reload restored URLs; live page state, form state and scroll position are not persisted
-- Private cookies/cache/DOM storage isolation and deterministic private-data cleanup are not implemented yet
+## Phase 4: Regular session persistence
+- Persist regular tab IDs, URLs, titles and active tab
+- Private-labelled tabs excluded from session metadata
+- Live page state and complete navigation stack are not restored
 
-## Phase 5: Personal library
-- Room database for bookmarks, folders and history
-- Search and clear-history controls
+## Phase 5: Personal library (implemented; build verification pending)
+- Room database entities, DAO and singleton database for bookmarks and history
+- Add bookmarks from the browser toolbar; duplicate URLs replace the existing bookmark record
+- Search, open and delete bookmarks
+- Record regular-tab page visits; private-labelled tabs are excluded
+- Search and clear all browsing history
+- Folder field exists in bookmark records; folder creation/rename/move UI remains future work
+- Per-entry history deletion and date filters remain future work
 
 ## Phase 6: Downloads and media
 - Download manager integration and notifications
 - Media playback and picture-in-picture where supported
 
 ## Phase 7: Privacy and security
-- Site permission controls
-- HTTPS-aware connection indicators
-- Tracker/ad-block rules architecture with transparent limitations
+- Site permission controls and HTTPS-aware connection indicators
+- Tracker/ad-block architecture and properly isolated private browsing
 - Secure storage design and privacy review
 
 ## Phase 8: Settings and polish
