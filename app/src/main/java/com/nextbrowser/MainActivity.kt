@@ -61,7 +61,9 @@ import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
 import java.util.UUID
 import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
