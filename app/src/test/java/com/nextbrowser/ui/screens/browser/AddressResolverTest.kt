@@ -49,6 +49,22 @@ class AddressResolverTest {
     }
 
     @Test
+    fun privateIpv4AddressWithPortAndPathIsTreatedAsAHost() {
+        assertEquals(
+            "https://192.168.1.10:8443/dashboard",
+            resolveAddress("192.168.1.10:8443/dashboard")
+        )
+    }
+
+    @Test
+    fun invalidIpv4AddressIsTreatedAsSearchText() {
+        assertEquals(
+            "https://www.google.com/search?q=256.1.1.1",
+            resolveAddress("256.1.1.1")
+        )
+    }
+
+    @Test
     fun reservedSearchCharactersAreEncoded() {
         assertEquals(
             "https://www.google.com/search?q=cats%20%26%20dogs",
