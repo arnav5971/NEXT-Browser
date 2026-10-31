@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -52,7 +52,9 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun HomeScreen(
-    onSearch: (String) -> Unit
+    onSearch: (String) -> Unit,
+    onShowTabs: () -> Unit,
+    tabCount: Int
 ) {
     var searchText by remember { mutableStateOf("") }
 
@@ -83,8 +85,15 @@ fun HomeScreen(
                     letterSpacing = 1.5.sp
                 )
             }
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.MoreHoriz, contentDescription = "More options")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onShowTabs) {
+                    Icon(Icons.Default.Tab, contentDescription = "Open tabs")
+                }
+                Text(
+                    text = tabCount.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -197,7 +206,7 @@ fun HomeScreen(
         Spacer(Modifier.weight(1f))
 
         Text(
-            text = "PHASE 2  •  BROWSER ENGINE",
+            text = "PHASE 3  •  TABS & SESSIONS",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 18.dp),
