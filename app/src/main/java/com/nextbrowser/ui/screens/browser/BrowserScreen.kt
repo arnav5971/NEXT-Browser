@@ -258,7 +258,8 @@ fun BrowserScreen(
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             if (!url.isNullOrBlank()) addressText = url
-                            pageError = null
+                            // Errors reported before onPageFinished (HTTP/SSL/main-frame failures)
+                            // must remain visible until a new navigation successfully commits.
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
                             currentTitleChangeHandler(pageTitle)
                             currentPageVisitedHandler(url ?: addressText, pageTitle)
