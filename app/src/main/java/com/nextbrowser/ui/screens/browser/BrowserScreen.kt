@@ -136,8 +136,8 @@ fun BrowserScreen(
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Go")
             }
-            IconButton(onClick = { onAddBookmark(addressText, pageTitle) }, enabled = addressText.isNotBlank()) {
-                Icon(Icons.Default.BookmarkAdd, contentDescription = "Add bookmark")
+            IconButton(onClick = { onAddBookmark(addressText, pageTitle) }, enabled = addressText.isNotBlank() && !isPrivateTab) {
+                Icon(Icons.Default.BookmarkAdd, contentDescription = if (isPrivateTab) "Bookmarks unavailable in private tabs" else "Add bookmark")
             }
             IconButton(onClick = onShowTabs) {
                 Icon(Icons.Default.Tab, contentDescription = "Open tabs")
