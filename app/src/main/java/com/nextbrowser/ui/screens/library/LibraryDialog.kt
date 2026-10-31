@@ -27,7 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nextbrowser.domain.repository.BrowserLibraryRepository
+import androidx.compose.runtime.setValue\n
 
 @Composable
 fun LibraryDialog(repository: BrowserLibraryRepository, showBookmarks: Boolean, onOpenUrl: (String) -> Unit, onDeleteBookmark: (String) -> Unit, onClearHistory: () -> Unit, onDismiss: () -> Unit) {
@@ -40,7 +40,7 @@ fun LibraryDialog(repository: BrowserLibraryRepository, showBookmarks: Boolean, 
         title = { Text(if (showBookmarks) "Bookmarks" else "History") },
         text = {
             Column {
-                OutlinedTextField(value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(if (showBookmarks) "Search bookmarks" else "Search history") })
+                OutlinedTextField(value = query, onValueChange = viewModel::updateSearchQuery, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(if (showBookmarks) "Search bookmarks" else "Search history") })
                 LazyColumn(modifier = Modifier.padding(top = 8.dp)) {
                     if (showBookmarks) {
                         items(bookmarks, key = { it.id }) { item ->
@@ -50,7 +50,7 @@ fun LibraryDialog(repository: BrowserLibraryRepository, showBookmarks: Boolean, 
                                     Text(item.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     if (!item.folder.isNullOrBlank()) Text(item.folder, style = MaterialTheme.typography.labelSmall)
                                 }
-                                IconButton(onClick = { onDeleteBookmark(item.id) }) { Icon(Icons.Default.Delete, contentDescription = "Delete bookmark") }
+                                IconButton(onClick = { viewModel.deleteBookmark(item.id) }) { Icon(Icons.Default.Delete, contentDescription = "Delete bookmark") }
                             }
                         }
                     } else {
