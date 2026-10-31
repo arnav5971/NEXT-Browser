@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,7 +53,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 @Composable
 fun BrowserScreen(
     initialUrl: String,
-    onGoHome: () -> Unit
+    onGoHome: () -> Unit,
+    onShowTabs: () -> Unit,
+    tabCount: Int,
+    isPrivateTab: Boolean,
+    onUrlChanged: (String) -> Unit,
+    onTitleChanged: (String) -> Unit
 ) {
     val context = LocalContext.current
     var addressText by remember { mutableStateOf(initialUrl) }
@@ -127,6 +133,14 @@ fun BrowserScreen(
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Go")
             }
+            IconButton(onClick = onShowTabs) {
+                Icon(Icons.Default.Tab, contentDescription = "Open tabs")
+            }
+            Text(
+                text = tabCount.toString() + if (isPrivateTab) " · Private" else "",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         if (isLoading) {
@@ -171,7 +185,10 @@ fun BrowserScreen(
                             favicon: Bitmap?
                         ) {
                             super.onPageStarted(view, url, favicon)
-                            if (!url.isNullOrBlank()) addressText = url
+                            if (!url.isNullOrBlank()) {
+                                addressText = url
+                                onUrlChanged(url)
+                            }
                             pageError = null
                             progress = 0
                             isLoading = true
@@ -181,6 +198,7 @@ fun BrowserScreen(
                             super.onPageFinished(view, url)
                             if (!url.isNullOrBlank()) addressText = url
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
+                            onTitleChanged(pageTitle)
                             progress = 100
                             isLoading = false
                             canGoBack = view?.canGoBack() == true
@@ -208,7 +226,10 @@ fun BrowserScreen(
                         }
 
                         override fun onReceivedTitle(view: WebView?, title: String?) {
-                            if (!title.isNullOrBlank()) pageTitle = title
+                            if (!title.isNullOrBlank()) {
+                                pageTitle = title
+                                onTitleChanged(title)
+                            }
                         }
                     }
 
