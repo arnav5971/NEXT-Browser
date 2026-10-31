@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,7 +57,8 @@ fun HomeScreen(
     onShowTabs: () -> Unit,
     tabCount: Int,
     onShowBookmarks: () -> Unit,
-    onShowHistory: () -> Unit
+    onShowHistory: () -> Unit,
+    onShowSettings: () -> Unit = {}
 ) {
     var searchText by remember { mutableStateOf("") }
 
@@ -88,6 +90,9 @@ fun HomeScreen(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onShowSettings) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                }
                 IconButton(onClick = onShowTabs) {
                     Icon(Icons.Default.Tab, contentDescription = "Open tabs")
                 }
