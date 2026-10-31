@@ -52,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextbrowser.data.local.BrowserSessionStore
-import com.nextbrowser.data.local.BrowserLibraryDao
 import com.nextbrowser.data.local.BookmarkEntity
 import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.model.BrowserTab
@@ -69,10 +68,11 @@ import com.nextbrowser.domain.model.BrowserSettings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import javax.inject.Inject
+import com.nextbrowser.domain.repository.BrowserLibraryRepository
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject lateinit var browserLibraryDao: BrowserLibraryDao
+    @Inject lateinit var browserLibraryRepository: BrowserLibraryRepository
     private val settingsViewModel: BrowserSettingsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
                 accentColor = accentColor
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    NextBrowserApp(browserLibraryDao)
+                    NextBrowserApp(browserLibraryRepository)
                 }
             }
         }
@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NextBrowserApp(dao: BrowserLibraryDao) {
+private fun NextBrowserApp(repository: BrowserLibraryRepository) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var libraryMode by remember { mutableStateOf<String?>(null) }
@@ -167,12 +167,12 @@ private fun NextBrowserApp(dao: BrowserLibraryDao) {
             },
             onPageVisited = { url, title ->
                 if (!activeTab.isPrivate && url.startsWith("http")) {
-                    scope.launch { dao.addHistory(HistoryEntity(id = UUID.randomUUID().toString(), title = title, url = url)) }
+                    scope.launch { repository.addHistory(HistoryEntity(id = UUID.randomUUID().toString(), title = title, url = url)) }
                 }
             },
             onAddBookmark = { url, title ->
                 if (!activeTab.isPrivate && url.startsWith("http")) {
-                    scope.launch { dao.addBookmark(BookmarkEntity(id = UUID.randomUUID().toString(), title = title.ifBlank { url }, url = url)) }
+                    scope.launch { repository.addBookmark(BookmarkEntity(id = UUID.randomUUID().toString(), title = title.ifBlank { url }, url = url)) }
                 }
             },
             onDownloadRequested = { url, userAgent, contentDisposition, mimeType, _ ->
@@ -205,15 +205,15 @@ private fun NextBrowserApp(dao: BrowserLibraryDao) {
 
     if (libraryMode != null) {
         LibraryDialog(
-            dao = dao,
+            repository = repository,
             showBookmarks = libraryMode == "bookmarks",
             onOpenUrl = { url ->
                 val index = tabs.indexOfFirst { it.id == activeTab.id }
                 if (index >= 0) tabs[index] = tabs[index].copy(url = url)
                 libraryMode = null
             },
-            onDeleteBookmark = { id -> scope.launch { dao.removeBookmark(id) } },
-            onClearHistory = { scope.launch { dao.clearHistory() } },
+            onDeleteBookmark = { id -> scope.launch { repository.removeBookmark(id) } },
+            onClearHistory = { scope.launch { repository.clearHistory() } },
             onDismiss = { libraryMode = null }
         )
     }
