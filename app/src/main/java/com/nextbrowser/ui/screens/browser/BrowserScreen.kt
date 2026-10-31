@@ -1,6 +1,7 @@
 package com.nextbrowser.ui.screens.browser
 
 import android.graphics.Bitmap
+import android.os.Bundle
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -66,7 +67,9 @@ fun BrowserScreen(
     onPageVisited: (String, String) -> Unit,
     onAddBookmark: (String, String) -> Unit,
     onDownloadRequested: (String, String?, String?, String?, Long) -> Unit,
-    onShowDownloads: () -> Unit
+    onShowDownloads: () -> Unit,
+    savedWebViewState: Bundle? = null,
+    onSaveWebViewState: (Bundle, String?) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val currentIsPrivateTab by rememberUpdatedState(isPrivateTab)
@@ -74,6 +77,8 @@ fun BrowserScreen(
     val currentUrlChangeHandler by rememberUpdatedState(onUrlChanged)
     val currentTitleChangeHandler by rememberUpdatedState(onTitleChanged)
     val currentPageVisitedHandler by rememberUpdatedState(onPageVisited)
+    val currentSaveWebViewStateHandler by rememberUpdatedState(onSaveWebViewState)
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var addressText by remember { mutableStateOf(initialUrl) }
     var pageTitle by remember { mutableStateOf("New tab") }
     var progress by remember { mutableStateOf(0) }
@@ -108,7 +113,13 @@ fun BrowserScreen(
     DisposableEffect(browserEngine) {
         val engine = browserEngine
         onDispose {
+            webViewInstance?.let { view ->
+                val state = Bundle()
+                view.saveState(state)
+                currentSaveWebViewStateHandler(state, view.url)
+            }
             engine?.destroy()
+            webViewInstance = null
         }
     }
 
@@ -180,6 +191,7 @@ fun BrowserScreen(
                 .weight(1f),
             factory = {
                 WebView(context).apply {
+                    webViewInstance = this
                     val engine = WebViewBrowserEngine(this)
                     browserEngine = engine
                     settings.javaScriptEnabled = true
@@ -263,7 +275,21 @@ fun BrowserScreen(
                         }
                     }
 
-                    engine.loadUrl(resolveAddress(initialUrl))
+                    val restoredState = savedWebViewState?.let { restoreState(it) }
+                    if (restoredState == null) {
+                        engine.loadUrl(resolveAddress(initialUrl))
+                    } else {
+                        url?.let { restoredUrl ->
+                            addressText = restoredUrl
+                            currentUrlChangeHandler(restoredUrl)
+                        }
+                        title?.takeIf { it.isNotBlank() }?.let { restoredTitle ->
+                            pageTitle = restoredTitle
+                            currentTitleChangeHandler(restoredTitle)
+                        }
+                        canGoBack = canGoBack()
+                        canGoForward = canGoForward()
+                    }
                 }
             }
         )
