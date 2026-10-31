@@ -1,5 +1,6 @@
 package com.nextbrowser.ui.screens.browser
 
+import android.os.Bundle
 import androidx.lifecycle.ViewModel
 import com.nextbrowser.domain.model.BrowserTab
 import com.nextbrowser.domain.repository.BrowserSessionRepository
@@ -18,6 +19,8 @@ class BrowserTabsViewModel @Inject constructor(
     private val initialTabs = restoredSession.first.ifEmpty {
         listOf(BrowserTab(id = UUID.randomUUID().toString()))
     }
+
+    private val webViewStates = mutableMapOf<String, Pair<Bundle, String?>>()
 
     private val _tabs = MutableStateFlow(initialTabs)
     val tabs: StateFlow<List<BrowserTab>> = _tabs.asStateFlow()
@@ -47,6 +50,7 @@ class BrowserTabsViewModel @Inject constructor(
         val currentTabs = _tabs.value
         val index = currentTabs.indexOfFirst { it.id == tabId }
         if (index == -1) return
+        webViewStates.remove(tabId)
 
         val updatedTabs = currentTabs.toMutableList().apply { removeAt(index) }
         if (updatedTabs.isEmpty()) {
@@ -68,6 +72,15 @@ class BrowserTabsViewModel @Inject constructor(
         if (_tabs.value.none { it.id == tabId }) return
         _activeTabId.value = tabId
         persistSession()
+    }
+
+    fun webViewState(tabId: String, expectedUrl: String?): Bundle? =
+        webViewStates[tabId]?.takeIf { it.second == expectedUrl }?.first
+
+    fun saveWebViewState(tabId: String, state: Bundle, url: String?) {
+        if (_tabs.value.any { it.id == tabId }) {
+            webViewStates[tabId] = state to url
+        }
     }
 
     fun updateTab(tabId: String, transform: (BrowserTab) -> BrowserTab) {
