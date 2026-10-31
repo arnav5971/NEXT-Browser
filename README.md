@@ -3,53 +3,56 @@
 
 NEXT Browser is an Android browser project focused on a premium, minimal experience, privacy-conscious defaults, and a modular architecture that can evolve over time.
 
-## Project status
+## Current implementation
 
-**Phase 3 — tab management foundation**
+**Phase 4 — regular tab session persistence (build verification pending)**
 
-- [x] Android/Kotlin project structure
-- [x] Jetpack Compose + Material 3 design foundation
-- [x] Light/dark theme support
-- [x] Home screen with search/address submission
-- [x] Android System WebView integration
-- [x] Address navigation, search fallback and loading progress
-- [x] Page title, reload, back/forward and load error feedback
-- [x] Basic WebView security configuration
-- [x] In-memory tab list, tab counter, switcher and close-tab actions
-- [x] Temporary/private-labelled tab creation
-- [ ] Independent WebView state retention per tab
-- [ ] Isolated private cookies/storage and private data cleanup
-- [ ] Persistent session restoration
-- [ ] Bookmarks, history and downloads
+- [x] Kotlin Android application foundation
+- [x] Jetpack Compose and Material 3 UI foundation
+- [x] Home screen and search/address entry
+- [x] Android System WebView-based browsing
+- [x] Navigation controls, loading progress and page title
+- [x] Basic WebView security settings
+- [x] In-memory regular and private-labelled tab list
+- [x] Tab switcher, create and close actions
+- [x] Persist regular tab IDs, last URLs and titles using app-private SharedPreferences
+- [x] Restore the last active regular tab after app restart
+- [x] Exclude private-labelled tabs from persisted session metadata
+- [ ] Retain each tab's live WebView instance and page/form/scroll state
+- [ ] Isolate private cookies, cache and DOM storage
+- [ ] Persistent bookmarks, history and downloads
 
-> Engine note: this build uses the Android System WebView supplied by the device. It does not bundle or independently maintain Chromium.
->
-> Privacy note: the current private-labelled tabs are temporary UI sessions and are not written to persistent browser history. They do **not** yet have isolated cookies or web storage, so they must not be treated as fully private/incognito browsing.
+### Privacy and session limitations
+
+- The browser uses the Android System WebView supplied by the device. It does not bundle a separate Chromium engine.
+- Session restoration reloads each regular tab's last saved URL. It does not preserve live page state, form values, scroll position or the exact back/forward history stack.
+- Private-labelled tabs are not stored in the regular session metadata and are discarded when the app process is restarted.
+- Private-labelled tabs currently use the same WebView profile as regular tabs. Cookie/cache/DOM storage isolation is **not implemented**, so this mode must not be treated as fully isolated incognito browsing.
+- No Android build or device test has been recorded for this phase yet.
 
 ## Technology
 
 - Kotlin
 - Jetpack Compose and Material 3
 - Android System WebView (device-provided)
-- Single-activity Android app
+- SharedPreferences for lightweight regular-tab session metadata
 - Minimum Android 10 (API 29)
-- Gradle Kotlin DSL and version catalog
 
-## Open the project
+## Run locally
 
-1. Open this repository in Android Studio (a recent stable version).
+1. Open this repository in Android Studio.
 2. Allow Gradle sync to complete.
-3. Select the `app` run configuration and run it on an Android 10+ device or emulator.
+3. Run the `app` configuration on an Android 10+ emulator or device.
 4. Internet access is required to load websites.
 
 ## Development principles
 
-- Keep every phase buildable before starting the next.
+- Build and test each phase before marking it release-ready.
 - Do not ship controls that pretend to work.
-- Keep the browsing engine behind an abstraction before considering a custom engine.
+- Keep engine integration modular before considering a custom Chromium engine.
 - Store secrets only with platform-backed secure storage.
 - Review permissions and privacy implications before adding capabilities.
 
 ## License
 
-No license has been selected yet. All rights reserved by default until a license is added.
+No license has been selected. All rights reserved by default until a license is added.
