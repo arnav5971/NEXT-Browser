@@ -8,6 +8,7 @@ import android.webkit.CookieManager
 import android.webkit.URLUtil
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -50,7 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextbrowser.data.local.BrowserSessionStore
-import com.nextbrowser.data.local.NextBrowserDatabase
+import com.nextbrowser.data.local.BrowserLibraryDao
 import com.nextbrowser.data.local.BookmarkEntity
 import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.model.BrowserTab
@@ -62,15 +64,36 @@ import com.nextbrowser.ui.theme.NextBrowserTheme
 import java.util.UUID
 import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
+import com.nextbrowser.ui.settings.BrowserSettingsViewModel
+import com.nextbrowser.domain.model.BrowserSettings
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var browserLibraryDao: BrowserLibraryDao
+    private val settingsViewModel: BrowserSettingsViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            NextBrowserTheme {
+            val settings by settingsViewModel.settings.collectAsState()
+            val darkTheme = when (settings.themeMode) {
+                BrowserSettings.THEME_DARK -> true
+                BrowserSettings.THEME_LIGHT -> false
+                else -> isSystemInDarkTheme()
+            }
+            val accentColor = settings.accentColorHex.takeIf { it.isNotBlank() }?.let { hex ->
+                runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+            }
+            NextBrowserTheme(
+                darkTheme = darkTheme,
+                dynamicColor = settings.dynamicColor,
+                accentColor = accentColor
+            ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    NextBrowserApp()
+                    NextBrowserApp(browserLibraryDao)
                 }
             }
         }
@@ -78,9 +101,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NextBrowserApp() {
+private fun NextBrowserApp(dao: BrowserLibraryDao) {
     val context = LocalContext.current
-    val dao = remember { NextBrowserDatabase.getInstance(context).libraryDao() }
     val scope = rememberCoroutineScope()
     var libraryMode by remember { mutableStateOf<String?>(null) }
     val restored = remember { BrowserSessionStore.restore(context) }
