@@ -22,8 +22,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
@@ -288,13 +288,13 @@ fun BrowserScreen(
                     onClick = { webView?.goBack() },
                     enabled = canGoBack
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
                 IconButton(
                     onClick = { webView?.goForward() },
                     enabled = canGoForward
                 ) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = "Forward")
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
                 }
                 IconButton(
                     onClick = {
@@ -317,11 +317,10 @@ fun BrowserScreen(
     }
 }
 
-private fun resolveAddress(input: String): String {
+internal fun resolveAddress(input: String): String {
     val value = input.trim()
     if (value.isEmpty()) return "https://www.google.com"
 
-    val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(value)
     if (value.startsWith("https://", ignoreCase = true) || value.startsWith("http://", ignoreCase = true)) return value
 
     val looksLikeHost = !value.contains(" ") &&
