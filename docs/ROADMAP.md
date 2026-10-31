@@ -6,34 +6,29 @@
 - Light/dark system theme
 
 ## Phase 2: First browsing experience
-- Home search connected to browser screen
-- Android System WebView adapter
-- Address navigation and search fallback
-- Loading progress, page title, back/forward, reload and main-frame error feedback
+- Android System WebView adapter and address navigation
+- Search fallback, loading progress, title, back/forward and reload
 - Basic WebView security configuration
 
-## Phase 3: Tab management foundation (implemented; build verification pending)
-- In-memory tab model and active-tab selection
-- Tab counter and tab switcher dialog
-- Create and close regular tabs
-- Create temporary private-labelled tabs
-- Explicitly disclose that per-tab WebView state, isolated private storage and process-death session restoration are not complete
+## Phase 3: Tab management foundation
+- In-memory tab model, tab switcher, create and close actions
+- Temporary private-labelled tabs
+- Per-tab WebView instances and isolated private storage remain future work
 
-## Phase 4: Real tab/session persistence
-- Retain independent WebView instances and navigation state per tab
-- Design isolated private browsing using a separate WebView data directory/process before any WebView is initialized there
-- Do not call private browsing fully isolated until cookie, cache, DOM storage and history behavior are tested
-- Persist regular tab metadata and restore sessions safely
-- Ensure private tabs are excluded from persistent session data
+## Phase 4: Regular session persistence (implementation added; build verification pending)
+- Restore regular tab metadata (tab ID, last URL and title) after app restart
+- Restore the previously active regular tab
+- Exclude private-labelled tabs from persisted session metadata
+- Private-labelled tabs are discarded on process restart
+- Reload restored URLs; live page state, form state and scroll position are not persisted
+- Private cookies/cache/DOM storage isolation and deterministic private-data cleanup are not implemented yet
 
 ## Phase 5: Personal library
-- Room database
-- Bookmarks, folders and history
+- Room database for bookmarks, folders and history
 - Search and clear-history controls
 
 ## Phase 6: Downloads and media
-- Download manager integration
-- Download notifications and file handling
+- Download manager integration and notifications
 - Media playback and picture-in-picture where supported
 
 ## Phase 7: Privacy and security
@@ -49,11 +44,11 @@
 ## Phase 9: Optional AI features
 - AI assistance through a secured backend
 - No provider secrets embedded in the Android application
-- Clear user consent before sending page content to an AI service
+- Clear consent before sending page content to an AI service
 
 ## Phase 10: Release readiness
 - Unit, UI and device testing
 - Crash and performance review
 - Store listing, privacy disclosures and release signing
 
-Each phase should be implemented and checked before the next phase begins.
+Every phase must be built and tested before being marked release-ready.
