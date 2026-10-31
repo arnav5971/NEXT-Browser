@@ -5,43 +5,40 @@ NEXT Browser is an Android browser project focused on a premium, minimal experie
 
 ## Current implementation
 
-**Phase 4 — regular tab session persistence (build verification pending)**
+**Phase 5 — personal library foundation (build verification pending)**
 
-- [x] Kotlin Android application foundation
-- [x] Jetpack Compose and Material 3 UI foundation
-- [x] Home screen and search/address entry
-- [x] Android System WebView-based browsing
-- [x] Navigation controls, loading progress and page title
-- [x] Basic WebView security settings
-- [x] In-memory regular and private-labelled tab list
-- [x] Tab switcher, create and close actions
-- [x] Persist regular tab IDs, last URLs and titles using app-private SharedPreferences
-- [x] Restore the last active regular tab after app restart
-- [x] Exclude private-labelled tabs from persisted session metadata
-- [ ] Retain each tab's live WebView instance and page/form/scroll state
-- [ ] Isolate private cookies, cache and DOM storage
-- [ ] Persistent bookmarks, history and downloads
+- [x] Kotlin Android application foundation with Jetpack Compose and Material 3
+- [x] Android System WebView-based browsing, address/search, navigation controls and basic security settings
+- [x] In-memory tab management and regular-tab URL/title session metadata persistence
+- [x] Room database with bookmark and browsing-history tables
+- [x] Add bookmarks from the browser toolbar; duplicate bookmark URLs update the existing entry
+- [x] Browse, search and delete bookmarks
+- [x] Record successful page visits from regular tabs; private-labelled tabs are excluded
+- [x] Browse/search history and clear all history
+- [ ] Bookmark folder creation, rename and move UI
+- [ ] History date filters and per-entry deletion
+- [ ] Independent retained WebView instances and isolated private storage
 
-### Privacy and session limitations
+### Important limitations
 
-- The browser uses the Android System WebView supplied by the device. It does not bundle a separate Chromium engine.
-- Session restoration reloads each regular tab's last saved URL. It does not preserve live page state, form values, scroll position or the exact back/forward history stack.
-- Private-labelled tabs are not stored in the regular session metadata and are discarded when the app process is restarted.
-- Private-labelled tabs currently use the same WebView profile as regular tabs. Cookie/cache/DOM storage isolation is **not implemented**, so this mode must not be treated as fully isolated incognito browsing.
-- No Android build or device test has been recorded for this phase yet.
+- Android System WebView is provided by the device; a separate bundled Chromium engine is not included.
+- Regular-tab session restoration reloads saved URLs; it does not preserve live page state or full back/forward history.
+- Private-labelled tabs are not persisted and do not write to browsing history or bookmarks through the current browser UI, but their cookies/cache/DOM storage are **not isolated** from regular tabs.
+- Bookmark folder metadata is represented in the database, but folder management controls are not yet available.
+- No Android Gradle build or device test has been recorded for Phase 5.
 
 ## Technology
 
-- Kotlin
-- Jetpack Compose and Material 3
-- Android System WebView (device-provided)
-- SharedPreferences for lightweight regular-tab session metadata
-- Minimum Android 10 (API 29)
+- Kotlin, Jetpack Compose, Material 3
+- Android System WebView
+- Room database for bookmarks and history
+- SharedPreferences for lightweight tab-session metadata
+- Minimum Android 10 (API 29), Java 17
 
 ## Run locally
 
-1. Open this repository in Android Studio.
-2. Allow Gradle sync to complete.
+1. Open the repository in Android Studio.
+2. Allow Gradle sync to complete and resolve the Room/KSP dependencies.
 3. Run the `app` configuration on an Android 10+ emulator or device.
 4. Internet access is required to load websites.
 
