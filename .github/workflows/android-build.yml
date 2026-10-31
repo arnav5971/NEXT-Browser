@@ -40,8 +40,29 @@ jobs:
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
 
+      - name: Run Android lint
+        run: gradle --no-daemon :app:lintDebug
+
       - name: Assemble debug APK
         run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXT-Browser-unit-test-reports
+          path: app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Android lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEXT-Browser-lint-reports
+          path: app/build/reports/lint-results-debug.*
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
