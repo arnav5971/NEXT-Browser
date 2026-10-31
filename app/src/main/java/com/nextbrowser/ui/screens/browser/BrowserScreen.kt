@@ -59,6 +59,7 @@ import com.nextbrowser.domain.engine.BrowserEngine
 @Composable
 fun BrowserScreen(
     initialUrl: String,
+    searchEngine: String = com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_GOOGLE,
     onGoHome: () -> Unit,
     onShowTabs: () -> Unit,
     tabCount: Int,
@@ -92,7 +93,7 @@ fun BrowserScreen(
     // A tab switch can change initialUrl while this composable stays in place.
     // Load the selected tab's URL without reloading the page currently navigating.
     LaunchedEffect(initialUrl) {
-        val targetUrl = resolveAddress(initialUrl)
+        val targetUrl = resolveAddress(initialUrl, searchEngine)
         val engine = browserEngine
         if (engine != null && engine.currentUrl != targetUrl) {
             addressText = targetUrl
@@ -114,7 +115,7 @@ fun BrowserScreen(
     }
 
     fun navigate(rawInput: String) {
-        val target = resolveAddress(rawInput)
+        val target = resolveAddress(rawInput, searchEngine)
         addressText = target
         pageError = null
         browserEngine?.loadUrl(target)
@@ -336,7 +337,7 @@ fun BrowserScreen(
 
                     val restoredState = savedWebViewState?.let { restoreState(it) }
                     if (restoredState == null) {
-                        engine.loadUrl(resolveAddress(initialUrl))
+                        engine.loadUrl(resolveAddress(initialUrl, searchEngine))
                     } else {
                         url?.let { restoredUrl ->
                             addressText = restoredUrl
@@ -423,18 +424,40 @@ fun BrowserScreen(
     }
 }
 
-internal fun resolveAddress(input: String): String {
+internal fun resolveAddress(
+    input: String,
+    searchEngine: String = com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_GOOGLE
+): String {
     val value = input.trim()
     if (value.isEmpty()) return "https://www.google.com"
 
-    if (value.startsWith("https://", ignoreCase = true) || value.startsWith("http://", ignoreCase = true)) return value
+    if (value.startsWith("https://", ignoreCase = true) ||
+        value.startsWith("http://", ignoreCase = true)
+    ) return value
 
+    // Local development endpoints commonly do not provide TLS certificates.
+    val isLocalHost = value.equals("localhost", ignoreCase = true) ||
+        value.startsWith("localhost:", ignoreCase = true) ||
+        value.startsWith("127.0.0.1") ||
+        value.startsWith("10.0.2.2")
     val looksLikeHost = !value.contains(" ") &&
-        (value == "localhost" || value.contains(".") || value.startsWith("127.0.0.1"))
+        (isLocalHost || HOST_WITH_OPTIONAL_PORT.matches(value))
 
-    return if (looksLikeHost) {
-        "https://$value"
-    } else {
-        "https://www.google.com/search?q=${URLEncoder.encode(value, "UTF-8").replace("+", "%20")}"
+    if (looksLikeHost) {
+        return "${if (isLocalHost) "http" else "https"}://$value"
     }
+
+    val encodedQuery = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+    val query = when (searchEngine.lowercase()) {
+        com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_BING ->
+            "https://www.bing.com/search?q=$encodedQuery"
+        com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_DUCKDUCKGO ->
+            "https://duckduckgo.com/?q=$encodedQuery"
+        else -> "https://www.google.com/search?q=$encodedQuery"
+    }
+    return query
 }
+
+private val HOST_WITH_OPTIONAL_PORT = Regex(
+    "^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}(?::[0-9]{1,5})?(?:/[^\\s]*)?$"
+)
