@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -155,7 +154,6 @@ fun HomeScreen(
         ) {
             QuickAccessTile(Modifier.weight(1f), Icons.Default.BookmarkBorder, "Bookmarks", onShowBookmarks)
             QuickAccessTile(Modifier.weight(1f), Icons.Default.History, "History", onShowHistory)
-            QuickAccessTile(Modifier.weight(1f), Icons.Default.Settings, "Settings")
         }
 
         Spacer(Modifier.height(28.dp))
