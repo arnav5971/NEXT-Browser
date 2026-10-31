@@ -1,6 +1,12 @@
 package com.nextbrowser
 
+import android.app.DownloadManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.webkit.CookieManager
+import android.webkit.URLUtil
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -50,6 +56,7 @@ import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.model.BrowserTab
 import com.nextbrowser.ui.screens.browser.BrowserScreen
 import com.nextbrowser.ui.screens.home.HomeScreen
+import com.nextbrowser.ui.screens.downloads.DownloadsDialog
 import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
 import java.util.UUID
@@ -85,6 +92,7 @@ private fun NextBrowserApp() {
         mutableStateOf(restored.second?.takeIf { id -> tabs.any { it.id == id } } ?: tabs.first().id)
     }
     var showTabSwitcher by remember { mutableStateOf(false) }
+    var showDownloadsDialog by remember { mutableStateOf(false) }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
     SideEffect { BrowserSessionStore.save(context, tabs, activeTabId) }
@@ -142,7 +150,32 @@ private fun NextBrowserApp() {
                 if (!activeTab.isPrivate && url.startsWith("http")) {
                     scope.launch { dao.addBookmark(BookmarkEntity(id = UUID.randomUUID().toString(), title = title.ifBlank { url }, url = url)) }
                 }
-            }
+            },
+            onDownloadRequested = { url, userAgent, contentDisposition, mimeType, _ ->
+                runCatching {
+                    val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+                        .replace(Regex("[\\\\/:*?\\\"<>|]"), "_")
+                        .ifBlank { "download" }
+                    val request = DownloadManager.Request(Uri.parse(url)).apply {
+                        setTitle(fileName)
+                        setDescription("Downloading with NEXT Browser")
+                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                        setAllowedOverMetered(true)
+                        setAllowedOverRoaming(false)
+                        if (!mimeType.isNullOrBlank()) setMimeType(mimeType)
+                        if (!userAgent.isNullOrBlank()) addRequestHeader("User-Agent", userAgent)
+                        CookieManager.getInstance().getCookie(url)?.takeIf { it.isNotBlank() }?.let {
+                            addRequestHeader("Cookie", it)
+                        }
+                    }
+                    val manager = context.getSystemService(DownloadManager::class.java)
+                    manager.enqueue(request)
+                }.onFailure {
+                    Toast.makeText(context, "Could not start download", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onShowDownloads = { showDownloadsDialog = true }
         )
     }
 
@@ -159,6 +192,10 @@ private fun NextBrowserApp() {
             onClearHistory = { scope.launch { dao.clearHistory() } },
             onDismiss = { libraryMode = null }
         )
+    }
+
+    if (showDownloadsDialog) {
+        DownloadsDialog(onDismiss = { showDownloadsDialog = false })
     }
 
     if (showTabSwitcher) {
