@@ -14,7 +14,7 @@
 - Private-labelled tabs excluded from session metadata
 - Live page state and complete navigation stack are not restored
 
-## Phase 5: Personal library (implemented; build verification pending)
+## Phase 5: Personal library (implemented; CI build verified)
 - Room database entities, DAO and singleton database for bookmarks and history
 - Add bookmarks from the browser toolbar; duplicate URLs replace the existing bookmark record
 - Search, open and delete bookmarks
@@ -23,8 +23,12 @@
 - Folder field exists in bookmark records; folder creation/rename/move UI remains future work
 - Per-entry history deletion and date filters remain future work
 
-## Phase 6: Downloads and media
-- Download manager integration and notifications
+## Phase 6: Downloads and media (in progress; initial downloads foundation CI-verified)
+- Android DownloadManager integration for HTTP(S) downloads
+- Completion notifications and in-app list with status/progress
+- Open completed files; cancel unfinished or remove failed downloads
+- Private-labelled tabs cannot initiate downloads until private storage is properly isolated
+- Android DownloadManager does not expose public pause/resume controls
 - Media playback and picture-in-picture where supported
 
 ## Phase 7: Privacy and security
