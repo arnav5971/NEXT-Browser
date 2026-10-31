@@ -40,7 +40,15 @@ class BrowserLibraryViewModel @Inject constructor(
         query.value = value
     }
 
-    fun addBookmark(bookmark: BookmarkEntity) {\n        viewModelScope.launch { repository.addBookmark(bookmark) }\n    }\n\n    fun addHistory(entry: HistoryEntity) {\n        viewModelScope.launch { repository.addHistory(entry) }\n    }\n\n    fun deleteBookmark(id: String) {
+    fun addBookmark(bookmark: BookmarkEntity) {
+        viewModelScope.launch { repository.addBookmark(bookmark) }
+    }
+
+    fun addHistory(entry: HistoryEntity) {
+        viewModelScope.launch { repository.addHistory(entry) }
+    }
+
+    fun deleteBookmark(id: String) {
         viewModelScope.launch { repository.removeBookmark(id) }
     }
 
