@@ -52,6 +52,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.net.URLEncoder
+import com.nextbrowser.data.engine.WebViewBrowserEngine
+import com.nextbrowser.domain.engine.BrowserEngine
 
 @Composable
 fun BrowserScreen(
@@ -78,6 +80,7 @@ fun BrowserScreen(
     var canGoForward by remember { mutableStateOf(false) }
     var pageError by remember { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<WebView?>(null) }
+    var browserEngine by remember { mutableStateOf<BrowserEngine?>(null) }
 
     // A tab switch can change initialUrl while this composable stays in place.
     // Load the selected tab's URL without reloading the page currently navigating.
@@ -85,7 +88,7 @@ fun BrowserScreen(
         val view = webView
         if (!initialUrl.isNullOrBlank() && view != null && view.url != initialUrl) {
             addressText = initialUrl
-            view.loadUrl(initialUrl)
+            browserEngine?.loadUrl(initialUrl)
         }
     }
 
@@ -93,21 +96,17 @@ fun BrowserScreen(
         val target = resolveAddress(rawInput)
         addressText = target
         pageError = null
-        webView?.loadUrl(target)
+        browserEngine?.loadUrl(target)
     }
 
     BackHandler(enabled = canGoBack) {
-        webView?.goBack()
+        browserEngine?.goBack()
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            webView?.apply {
-                stopLoading()
-                webChromeClient = null
-                webViewClient = WebViewClient()
-                destroy()
-            }
+            browserEngine?.destroy()
+            browserEngine = null
             webView = null
         }
     }
@@ -152,7 +151,7 @@ fun BrowserScreen(
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Go")
             }
-            IconButton(onClick = { webView?.url?.let { onAddBookmark(it, pageTitle) } }, enabled = webView?.url?.startsWith("http") == true && !isPrivateTab) {
+            IconButton(onClick = { browserEngine?.currentUrl?.let { onAddBookmark(it, pageTitle) } }, enabled = browserEngine?.currentUrl?.startsWith("http") == true && !isPrivateTab) {
                 Icon(Icons.Default.BookmarkAdd, contentDescription = if (isPrivateTab) "Bookmarks unavailable in private tabs" else "Add bookmark")
             }
             IconButton(onClick = onShowTabs) {
@@ -181,6 +180,7 @@ fun BrowserScreen(
             factory = {
                 WebView(context).apply {
                     webView = this
+                    browserEngine = WebViewBrowserEngine(this)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
@@ -267,6 +267,7 @@ fun BrowserScreen(
             },
             update = { view ->
                 webView = view
+                if (browserEngine == null) browserEngine = WebViewBrowserEngine(view)
             }
         )
 
@@ -297,13 +298,13 @@ fun BrowserScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { webView?.goBack() },
+                    onClick = { browserEngine?.goBack() },
                     enabled = canGoBack
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
                 IconButton(
-                    onClick = { webView?.goForward() },
+                    onClick = { browserEngine?.goForward() },
                     enabled = canGoForward
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
@@ -311,7 +312,7 @@ fun BrowserScreen(
                 IconButton(
                     onClick = {
                         pageError = null
-                        webView?.reload()
+                        browserEngine?.reload()
                     }
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = "Reload")
