@@ -56,4 +56,29 @@ class AddressResolverTest {
         )
     }
 
+    @Test
+    fun bingSearchUsesSelectedProvider() {
+        assertEquals(
+            "https://www.bing.com/search?q=weather%20today",
+            resolveAddress("weather today", "bing")
+        )
+    }
+
+    @Test
+    fun duckDuckGoSearchUsesSelectedProvider() {
+        assertEquals(
+            "https://duckduckgo.com/?q=weather",
+            resolveAddress("weather", "duckduckgo")
+        )
+    }
+
+    @Test
+    fun localhostUsesHttpForLocalDevelopmentServers() {
+        assertEquals("http://localhost:8080", resolveAddress("localhost:8080"))
+    }
+
+    @Test
+    fun domainWithPortIsRecognizedAsAddress() {
+        assertEquals("https://example.com:8443/path", resolveAddress("example.com:8443/path"))
+    }
 }
