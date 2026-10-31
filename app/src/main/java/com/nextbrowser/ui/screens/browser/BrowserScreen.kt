@@ -52,7 +52,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun BrowserScreen(
@@ -345,6 +344,6 @@ internal fun resolveAddress(input: String): String {
     return if (looksLikeHost) {
         "https://$value"
     } else {
-        "https://www.google.com/search?q=${URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")}"
+        "https://www.google.com/search?q=${URLEncoder.encode(value, "UTF-8").replace("+", "%20")}"
     }
 }
