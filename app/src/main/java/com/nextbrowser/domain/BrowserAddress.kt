@@ -23,7 +23,7 @@ object BrowserAddress {
         val host = if (authority.count { it == ':' } == 1) authority.substringBeforeLast(':') else authority
         if (host.equals("localhost", true)) return true
         if (host.matches(Regex("""(?:[0-9]{1,3}\.){3}[0-9]{1,3}"""))) {
-            return host.split('.').all { it.toIntOrNull() in 0..255 }
+            return host.split('.').all { octet -> octet.toIntOrNull()?.let { it in 0..255 } == true }
         }
         return host.contains('.') && host.split('.').all { label ->
             label.isNotEmpty() && label.length <= 63 &&
