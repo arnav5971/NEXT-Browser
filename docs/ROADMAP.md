@@ -1,15 +1,17 @@
 # NEXT Browser — Development Roadmap
 
-## Phase 1: Foundation (current)
+## Phase 1: Foundation (completed in repository)
 - Android project configuration
 - Compose design system and home screen shell
 - Light/dark system theme
 
-## Phase 2: Browser engine
-- Define a `BrowserEngine` interface
-- Implement the first adapter with Android System WebView
-- Add address navigation, loading progress, back/forward, reload and error states
-- Clearly document WebView limitations and engine ownership
+## Phase 2: First browsing experience (implemented; build verification pending)
+- Connect home search field to the browser screen
+- Use Android System WebView supplied by the device
+- Address navigation and search fallback
+- Loading progress, page title, back/forward, reload and main-frame error feedback
+- Basic WebView security configuration
+- Document engine ownership and limitations
 
 ## Phase 3: Tabs and sessions
 - Tab model and tab switcher
