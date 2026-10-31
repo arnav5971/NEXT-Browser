@@ -30,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -43,11 +44,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nextbrowser.data.local.BrowserSessionStore
+import com.nextbrowser.data.local.NextBrowserDatabase
+import com.nextbrowser.data.local.BookmarkEntity
+import com.nextbrowser.data.local.HistoryEntity
 import com.nextbrowser.domain.model.BrowserTab
 import com.nextbrowser.ui.screens.browser.BrowserScreen
 import com.nextbrowser.ui.screens.home.HomeScreen
+import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +71,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun NextBrowserApp() {
     val context = LocalContext.current
+    val dao = remember { NextBrowserDatabase.getInstance(context).libraryDao() }
+    val scope = rememberCoroutineScope()
+    var libraryMode by remember { mutableStateOf<String?>(null) }
     val restored = remember { BrowserSessionStore.restore(context) }
     val tabs = remember {
         mutableStateListOf<BrowserTab>().apply {
@@ -102,7 +111,9 @@ private fun NextBrowserApp() {
                 if (index >= 0) tabs[index] = tabs[index].copy(url = query)
             },
             onShowTabs = { showTabSwitcher = true },
-            tabCount = tabs.size
+            tabCount = tabs.size,
+            onShowBookmarks = { libraryMode = "bookmarks" },
+            onShowHistory = { libraryMode = "history" }
         )
     } else {
         BrowserScreen(
@@ -121,7 +132,32 @@ private fun NextBrowserApp() {
             onTitleChanged = { title ->
                 val index = tabs.indexOfFirst { it.id == activeTab.id }
                 if (index >= 0 && tabs[index].title != title) tabs[index] = tabs[index].copy(title = title)
+            },
+            onPageVisited = { url, title ->
+                if (!activeTab.isPrivate && url.startsWith("http")) {
+                    scope.launch { dao.addHistory(HistoryEntity(id = UUID.randomUUID().toString(), title = title, url = url)) }
+                }
+            },
+            onAddBookmark = { url, title ->
+                if (!activeTab.isPrivate && url.startsWith("http")) {
+                    scope.launch { dao.addBookmark(BookmarkEntity(id = UUID.randomUUID().toString(), title = title.ifBlank { url }, url = url)) }
+                }
             }
+        )
+    }
+
+    if (libraryMode != null) {
+        LibraryDialog(
+            dao = dao,
+            showBookmarks = libraryMode == "bookmarks",
+            onOpenUrl = { url ->
+                val index = tabs.indexOfFirst { it.id == activeTab.id }
+                if (index >= 0) tabs[index] = tabs[index].copy(url = url)
+                libraryMode = null
+            },
+            onDeleteBookmark = { id -> scope.launch { dao.removeBookmark(id) } },
+            onClearHistory = { scope.launch { dao.clearHistory() } },
+            onDismiss = { libraryMode = null }
         )
     }
 
