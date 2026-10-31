@@ -1,6 +1,8 @@
 package com.nextbrowser.di
 
 import com.nextbrowser.data.datastore.DefaultBrowserSettingsRepository
+import com.nextbrowser.data.repository.DefaultBrowserLibraryRepository
+import com.nextbrowser.domain.repository.BrowserLibraryRepository
 import com.nextbrowser.domain.repository.BrowserSettingsRepository
 import dagger.Binds
 import dagger.Module
@@ -17,4 +19,10 @@ abstract class RepositoryModule {
     abstract fun bindBrowserSettingsRepository(
         implementation: DefaultBrowserSettingsRepository
     ): BrowserSettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBrowserLibraryRepository(
+        implementation: DefaultBrowserLibraryRepository
+    ): BrowserLibraryRepository
 }
