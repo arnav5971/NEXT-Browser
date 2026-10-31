@@ -4,7 +4,6 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.webkit.MimeTypeMap
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,10 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -119,11 +116,13 @@ fun DownloadsDialog(onDismiss: () -> Unit) {
                                 Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                                 Text(listOfNotNull(item.status, item.progress.takeIf { it.isNotBlank() }).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            IconButton(onClick = {
-                                manager.remove(item.id)
-                                refresh()
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Remove download")
+                            if (item.status != "Completed") {
+                                IconButton(onClick = {
+                                    manager.remove(item.id)
+                                    refresh()
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Cancel or remove download")
+                                }
                             }
                         }
                     }
