@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import com.nextbrowser.data.local.BrowserLibraryDao
 @Composable
 fun LibraryDialog(dao: BrowserLibraryDao, showBookmarks: Boolean, onOpenUrl: (String) -> Unit, onDeleteBookmark: (String) -> Unit, onClearHistory: () -> Unit, onDismiss: () -> Unit) {
     var query by remember { mutableStateOf("") }
+    var confirmClear by remember { mutableStateOf(false) }
     val bookmarks by (if (query.isBlank()) dao.observeBookmarks() else dao.searchBookmarks(query)).collectAsState(initial = emptyList())
     val history by (if (query.isBlank()) dao.observeRecentHistory() else dao.searchHistory(query)).collectAsState(initial = emptyList())
     AlertDialog(
@@ -63,7 +65,23 @@ fun LibraryDialog(dao: BrowserLibraryDao, showBookmarks: Boolean, onOpenUrl: (St
                 }
             }
         },
-        confirmButton = { if (!showBookmarks) TextButton(onClick = onClearHistory) { Text("Clear history") } else TextButton(onClick = onDismiss) { Text("Done") } },
+        confirmButton = { if (!showBookmarks) TextButton(onClick = { confirmClear = true }) { Text("Clear history") } else TextButton(onClick = onDismiss) { Text("Done") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
     )
+    if (confirmClear) {
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            title = { Text("Clear browsing history?") },
+            text = { Text("This permanently deletes all saved browsing history. Bookmarks will remain.") },
+            confirmButton = {
+                Button(onClick = {
+                    onClearHistory()
+                    confirmClear = false
+                }) { Text("Clear") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClear = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
