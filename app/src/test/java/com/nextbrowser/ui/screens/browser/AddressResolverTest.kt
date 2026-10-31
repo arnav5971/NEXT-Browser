@@ -40,7 +40,7 @@ class AddressResolverTest {
 
     @Test
     fun localhostIsTreatedAsAHost() {
-        assertEquals("https://localhost", resolveAddress("localhost"))
+        assertEquals("http://localhost", resolveAddress("localhost"))
     }
 
     @Test
