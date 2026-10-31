@@ -30,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,9 +38,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nextbrowser.data.local.BrowserSessionStore
 import com.nextbrowser.domain.model.BrowserTab
 import com.nextbrowser.ui.screens.browser.BrowserScreen
 import com.nextbrowser.ui.screens.home.HomeScreen
@@ -51,10 +54,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             NextBrowserTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     NextBrowserApp()
                 }
             }
@@ -64,19 +64,24 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun NextBrowserApp() {
+    val context = LocalContext.current
+    val restored = remember { BrowserSessionStore.restore(context) }
     val tabs = remember {
-        mutableStateListOf(BrowserTab(id = UUID.randomUUID().toString()))
+        mutableStateListOf<BrowserTab>().apply {
+            addAll(restored.first)
+            if (isEmpty()) add(BrowserTab(id = UUID.randomUUID().toString()))
+        }
     }
-    var activeTabId by remember { mutableStateOf(tabs.first().id) }
+    var activeTabId by remember {
+        mutableStateOf(restored.second?.takeIf { id -> tabs.any { it.id == id } } ?: tabs.first().id)
+    }
     var showTabSwitcher by remember { mutableStateOf(false) }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
+    SideEffect { BrowserSessionStore.save(context, tabs, activeTabId) }
+
     fun createTab(isPrivate: Boolean = false) {
-        val tab = BrowserTab(
-            id = UUID.randomUUID().toString(),
-            title = if (isPrivate) "Private tab" else "New tab",
-            isPrivate = isPrivate
-        )
+        val tab = BrowserTab(id = UUID.randomUUID().toString(), title = if (isPrivate) "Private tab" else "New tab", isPrivate = isPrivate)
         tabs.add(tab)
         activeTabId = tab.id
         showTabSwitcher = false
@@ -86,11 +91,8 @@ private fun NextBrowserApp() {
         val index = tabs.indexOfFirst { it.id == tabId }
         if (index == -1) return
         tabs.removeAt(index)
-        if (tabs.isEmpty()) {
-            createTab()
-        } else if (activeTabId == tabId) {
-            activeTabId = tabs[(index - 1).coerceAtLeast(0).coerceAtMost(tabs.lastIndex)].id
-        }
+        if (tabs.isEmpty()) createTab()
+        else if (activeTabId == tabId) activeTabId = tabs[(index - 1).coerceAtLeast(0).coerceAtMost(tabs.lastIndex)].id
     }
 
     if (activeTab.url.isNullOrBlank()) {
@@ -114,27 +116,19 @@ private fun NextBrowserApp() {
             isPrivateTab = activeTab.isPrivate,
             onUrlChanged = { url ->
                 val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0 && tabs[index].url != url) {
-                    tabs[index] = tabs[index].copy(url = url)
-                }
+                if (index >= 0 && tabs[index].url != url) tabs[index] = tabs[index].copy(url = url)
             },
             onTitleChanged = { title ->
                 val index = tabs.indexOfFirst { it.id == activeTab.id }
-                if (index >= 0 && tabs[index].title != title) {
-                    tabs[index] = tabs[index].copy(title = title)
-                }
+                if (index >= 0 && tabs[index].title != title) tabs[index] = tabs[index].copy(title = title)
             }
         )
     }
 
     if (showTabSwitcher) {
         TabSwitcherDialog(
-            tabs = tabs,
-            activeTabId = activeTabId,
-            onSelect = { tabId ->
-                activeTabId = tabId
-                showTabSwitcher = false
-            },
+            tabs = tabs, activeTabId = activeTabId,
+            onSelect = { activeTabId = it; showTabSwitcher = false },
             onClose = ::closeTab,
             onNewTab = { createTab() },
             onNewPrivateTab = { createTab(isPrivate = true) },
@@ -144,101 +138,30 @@ private fun NextBrowserApp() {
 }
 
 @Composable
-private fun TabSwitcherDialog(
-    tabs: List<BrowserTab>,
-    activeTabId: String,
-    onSelect: (String) -> Unit,
-    onClose: (String) -> Unit,
-    onNewTab: () -> Unit,
-    onNewPrivateTab: () -> Unit,
-    onDismiss: () -> Unit
-) {
+private fun TabSwitcherDialog(tabs: List<BrowserTab>, activeTabId: String, onSelect: (String) -> Unit, onClose: (String) -> Unit, onNewTab: () -> Unit, onNewPrivateTab: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Tabs (${tabs.size})")
-                Icon(Icons.Default.Tab, contentDescription = null)
-            }
-        },
+        title = { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) { Text("Tabs (${tabs.size})"); Icon(Icons.Default.Tab, contentDescription = null) } },
         text = {
             Column {
                 LazyColumn {
                     items(tabs, key = { it.id }) { tab ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { onSelect(tab.id) },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (tab.id == activeTabId) {
-                                    MaterialTheme.colorScheme.secondaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
+                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onSelect(tab.id) }, colors = CardDefaults.cardColors(containerColor = if (tab.id == activeTabId) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (tab.isPrivate) Icons.Default.Lock else Icons.Default.Language, contentDescription = null)
+                                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                                    Text(tab.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(if (tab.isPrivate) "Private session" else tab.url ?: "Start page", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (tab.isPrivate) Icons.Default.Lock else Icons.Default.Language,
-                                    contentDescription = if (tab.isPrivate) "Private tab" else "Tab"
-                                )
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(horizontal = 10.dp)
-                                ) {
-                                    Text(
-                                        text = tab.title,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = if (tab.isPrivate) "Private session" else tab.url ?: "Start page",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                IconButton(onClick = { onClose(tab.id) }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close tab")
-                                }
+                                IconButton(onClick = { onClose(tab.id) }) { Icon(Icons.Default.Close, contentDescription = "Close tab") }
                             }
                         }
                     }
                 }
-                Text(
-                    text = "Private tabs are temporary in this phase. Separate cookie/storage isolation and full session restoration are not implemented yet.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 10.dp)
-                )
+                Text("Regular tabs are restored after restarting the app. Private tabs are not saved. Private cookie/storage isolation is not implemented yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
             }
         },
-        confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onNewPrivateTab) {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                    Text(" Private")
-                }
-                Button(onClick = onNewTab) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Text(" New tab")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Done") }
-        }
+        confirmButton = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton(onClick = onNewPrivateTab) { Icon(Icons.Default.Lock, contentDescription = null); Text(" Private") }; Button(onClick = onNewTab) { Icon(Icons.Default.Add, contentDescription = null); Text(" New tab") } } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Done") } }
     )
 }
