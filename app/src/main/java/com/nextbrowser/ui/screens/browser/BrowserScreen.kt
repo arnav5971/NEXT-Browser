@@ -113,13 +113,15 @@ fun BrowserScreen(
     DisposableEffect(browserEngine) {
         val engine = browserEngine
         onDispose {
-            webViewInstance?.let { view ->
-                val state = Bundle()
-                view.saveState(state)
-                currentSaveWebViewStateHandler(state, view.url)
+            if (engine != null) {
+                webViewInstance?.let { view ->
+                    val state = Bundle()
+                    view.saveState(state)
+                    currentSaveWebViewStateHandler(state, view.url)
+                }
+                engine.destroy()
+                webViewInstance = null
             }
-            engine?.destroy()
-            webViewInstance = null
         }
     }
 
