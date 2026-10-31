@@ -50,7 +50,6 @@ fun NextBrowserTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
         content = content
     )
 }
