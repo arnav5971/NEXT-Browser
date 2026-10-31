@@ -79,14 +79,13 @@ fun BrowserScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var pageError by remember { mutableStateOf<String?>(null) }
-    var webView by remember { mutableStateOf<WebView?>(null) }
     var browserEngine by remember { mutableStateOf<BrowserEngine?>(null) }
 
     // A tab switch can change initialUrl while this composable stays in place.
     // Load the selected tab's URL without reloading the page currently navigating.
     LaunchedEffect(initialUrl) {
-        val view = webView
-        if (!initialUrl.isNullOrBlank() && view != null && view.url != initialUrl) {
+        val currentUrl = browserEngine?.currentUrl
+        if (!initialUrl.isNullOrBlank() && browserEngine != null && currentUrl != initialUrl) {
             addressText = initialUrl
             browserEngine?.loadUrl(initialUrl)
         }
@@ -107,7 +106,6 @@ fun BrowserScreen(
         onDispose {
             browserEngine?.destroy()
             browserEngine = null
-            webView = null
         }
     }
 
@@ -179,7 +177,6 @@ fun BrowserScreen(
                 .weight(1f),
             factory = {
                 WebView(context).apply {
-                    webView = this
                     browserEngine = WebViewBrowserEngine(this)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
@@ -266,7 +263,6 @@ fun BrowserScreen(
                 }
             },
             update = { view ->
-                webView = view
                 if (browserEngine == null) browserEngine = WebViewBrowserEngine(view)
             }
         )
