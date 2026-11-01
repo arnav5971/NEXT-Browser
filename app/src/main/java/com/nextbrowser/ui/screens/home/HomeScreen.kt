@@ -32,6 +32,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.BasicTextField
@@ -52,19 +57,23 @@ fun HomeScreen(
     onShowSettings: () -> Unit = {}
 ) {
     var searchText by remember { mutableStateOf("") }
-    val ink = MaterialTheme.colorScheme.onSurface
-    val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val blue = MaterialTheme.colorScheme.primary
+    // Fixed reference palette: the New Tab design must not shift with Android Dynamic Color.
+    val ink = Color(0xFF182234)
+    val muted = Color(0xFF758293)
+    val blue = Color(0xFF2F66D8)
+    val border = Color(0xFFDDE5ED)
+    val page = Color(0xFFFFFFFF)
+    val pale = Color(0xFFEAF1F8)
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(Modifier.fillMaxSize().background(page)) {
         // Browser tab strip
         Row(
-            Modifier.fillMaxWidth().height(34.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)).padding(start = 16.dp, end = 12.dp),
+            Modifier.fillMaxWidth().height(34.dp).background(pale).padding(start = 16.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = page,
                 modifier = Modifier.weight(1f).fillMaxHeight().padding(top = 5.dp)
             ) {
                 Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -94,7 +103,7 @@ fun HomeScreen(
             Surface(
                 modifier = Modifier.weight(1f).height(40.dp),
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .75f)
+                pale
             ) {
                 Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Search, null, tint = muted)
@@ -120,7 +129,7 @@ fun HomeScreen(
             IconButton(onClick = onNewTab, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Add, "New tab", tint = muted) }
             IconButton(onClick = onShowSettings, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.MoreVert, "More options", tint = muted) }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f))
+        HorizontalDivider(color = border)
 
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp)
@@ -170,7 +179,7 @@ fun HomeScreen(
                 placeholder = { Text("What are you looking for?", color = muted) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = muted) },
                 trailingIcon = {
-                    Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Surface(shape = RoundedCornerShape(10.dp), color = pale) {
                         IconButton(onClick = { if (searchText.isNotBlank()) onSearch(searchText) }, modifier = Modifier.size(42.dp)) {
                             Text("↵", color = blue, fontSize = 20.sp)
                         }
@@ -179,10 +188,10 @@ fun HomeScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { if (searchText.isNotBlank()) onSearch(searchText) }),
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    unfocusedBorderColor = border,
                     focusedBorderColor = blue,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface
+                    unfocusedContainerColor = page,
+                    focusedContainerColor = page
                 )
             )
             Spacer(Modifier.height(14.dp))
@@ -210,7 +219,7 @@ fun HomeScreen(
             Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 QuickAccessTile(Modifier.weight(1f), Icons.Default.Book, "Wikipedia", blue) { onSearch("https://www.wikipedia.org") }
-                QuickAccessTile(Modifier.weight(1f), Icons.Default.PlayArrow, "YouTube", MaterialTheme.colorScheme.error) { onSearch("https://m.youtube.com") }
+                QuickAccessTile(Modifier.weight(1f), Icons.Default.PlayArrow, "YouTube", Color(0xFFE44B4B)) { onSearch("https://m.youtube.com") }
             }
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -221,7 +230,7 @@ fun HomeScreen(
         }
 
         // Persistent bottom navigation
-        Surface(tonalElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
+        Surface(tonalElevation = 2.dp, color = page) {
             Row(
                 Modifier.fillMaxWidth().height(58.dp).navigationBarsPadding().padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -248,8 +257,8 @@ private fun QuickAccessTile(
     Card(
         modifier = modifier.height(72.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDDE5ED)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center) {
@@ -257,7 +266,7 @@ private fun QuickAccessTile(
                 Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(23.dp)) }
             }
             Spacer(Modifier.height(6.dp))
-            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFF182234))
         }
     }
 }
@@ -275,15 +284,15 @@ private fun BottomItem(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box {
-            Icon(icon, contentDescription = label, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp))
+            Icon(icon, contentDescription = label, tint = if (selected) Color(0xFF2F66D8) else Color(0xFF758293), modifier = Modifier.size(26.dp))
             if (badge != null && badge > 0) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.TopEnd).offset(x = 9.dp, y = (-5).dp).size(17.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Text(badge.toString(), color = MaterialTheme.colorScheme.onPrimary, fontSize = 10.sp) }
+                Surface(shape = CircleShape, color = Color(0xFF2F66D8), modifier = Modifier.align(Alignment.TopEnd).offset(x = 9.dp, y = (-5).dp).size(17.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Text(badge.toString(), color = Color.White, fontSize = 10.sp) }
                 }
             }
         }
         Spacer(Modifier.height(3.dp))
-        Text(label, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+        Text(label, color = if (selected) Color(0xFF2F66D8) else Color(0xFF758293), style = MaterialTheme.typography.labelSmall)
     }
 }
 
