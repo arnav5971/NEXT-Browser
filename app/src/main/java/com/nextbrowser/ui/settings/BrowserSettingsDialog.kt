@@ -21,6 +21,7 @@ fun BrowserSettingsDialog(
     onThemeChange: (String) -> Unit,
     onSearchEngineChange: (String) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onDesktopSiteChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -45,6 +46,16 @@ fun BrowserSettingsDialog(
                 ) {
                     Text("Dynamic colors", modifier = Modifier.weight(1f))
                     Switch(checked = settings.dynamicColor, onCheckedChange = onDynamicColorChange)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Desktop site")
+                        Text("Request desktop versions of websites", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = settings.desktopSite, onCheckedChange = onDesktopSiteChange)
                 }
                 Text("Search engine", modifier = Modifier.padding(top = 12.dp))
                 listOf(
