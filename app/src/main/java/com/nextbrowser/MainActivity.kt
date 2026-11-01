@@ -501,7 +501,9 @@ private fun configureWebViewForMode(context: Context, webView: WebView, desktopM
         }
 
         useWideViewPort = true
-        loadWithOverviewMode = desktopMode
+        // Never shrink a desktop page to fit the phone screen. Desktop mode uses
+        // a fixed 1024 CSS-pixel viewport and lets the user pan/zoom naturally.
+        loadWithOverviewMode = false
 
         setSupportZoom(true)
         builtInZoomControls = true
@@ -530,6 +532,9 @@ private fun BrowserWebView(
             WebView(ctx).apply {
                 setBackgroundColor(android.graphics.Color.WHITE)
                 configureWebViewForMode(ctx, this, desktop)
+                // 100% scale gives desktop pages a real desktop-sized canvas;
+                // mobile mode keeps WebView's normal device-responsive scale.
+                setInitialScale(if (desktop) 100 else 0)
 
                 webChromeClient = object : WebChromeClient() {
                     override fun onProgressChanged(view: WebView?, value: Int) {
@@ -554,8 +559,23 @@ private fun BrowserWebView(
 
                     override fun onPageFinished(view: WebView?, finished: String?) {
                         if (!finished.isNullOrBlank()) {
-                            // Never inject or overwrite a site's viewport meta tag:
-                            // responsive websites must control their own mobile layout.
+                            if (desktop && view != null) {
+                                // Desktop-only viewport override. Mobile mode never
+                                // touches the site's viewport metadata.
+                                view.evaluateJavascript(
+                                    """(function() {
+                                        var meta = document.querySelector('meta[name="viewport"]');
+                                        if (!meta) {
+                                            meta = document.createElement('meta');
+                                            meta.name = 'viewport';
+                                            (document.head || document.documentElement).appendChild(meta);
+                                        }
+                                        meta.setAttribute('content',
+                                            'width=1024, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes');
+                                    })();""".trimIndent(),
+                                    null
+                                )
+                            }
                             onPage(finished, view?.title?.takeIf { it.isNotBlank() } ?: finished)
                         }
                     }
