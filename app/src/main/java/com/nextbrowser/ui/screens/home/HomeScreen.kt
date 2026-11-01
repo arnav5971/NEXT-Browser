@@ -55,7 +55,8 @@ fun HomeScreen(
     onCloseTab: () -> Unit = onShowTabs,
     onShowBookmarks: () -> Unit,
     onShowHistory: () -> Unit,
-    onShowSettings: () -> Unit = {}
+    onShowSettings: () -> Unit = {},
+    onShowAiAssistant: () -> Unit = onShowSettings
 ) {
     var searchText by remember { mutableStateOf("") }
     // Fixed reference palette: the New Tab design must not shift with Android Dynamic Color.
@@ -243,7 +244,7 @@ fun HomeScreen(
                 BottomItem(Icons.Default.Home, "Home", true, onClick = {})
                 BottomItem(Icons.Default.BookmarkBorder, "Saved", false, onClick = onShowBookmarks)
                 BottomItem(Icons.Default.History, "History", false, onClick = onShowHistory)
-                BottomItem(Icons.Default.Language, "AI", false, onClick = onShowSettings)
+                BottomItem(Icons.Default.Language, "AI", false, onClick = onShowAiAssistant)
                 BottomItem(Icons.Default.Tab, "Tabs", false, onClick = onShowTabs, badge = tabCount)
             }
         }
