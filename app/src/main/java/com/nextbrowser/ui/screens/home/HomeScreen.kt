@@ -97,10 +97,10 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowBack, "Back", tint = muted) }
-            IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowForward, "Forward", tint = muted) }
-            IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Refresh, "Refresh", tint = muted) }
-            IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Home, "Home", tint = muted) }
+            IconButton(onClick = {}, enabled = false, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowBack, "Back", tint = muted) }
+            IconButton(onClick = {}, enabled = false, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowForward, "Forward", tint = muted) }
+            IconButton(onClick = {}, enabled = false, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Refresh, "Refresh", tint = muted) }
+            IconButton(onClick = {}, enabled = false, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Home, "Home", tint = muted) }
             Surface(
                 modifier = Modifier.weight(1f).height(40.dp),
                 shape = RoundedCornerShape(28.dp),
