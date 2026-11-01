@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,7 +113,13 @@ private fun NextBrowserApp(
     var showTabSwitcher by remember { mutableStateOf(false) }
     var showDownloadsDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-    val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
+    val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.firstOrNull()
+
+    // Keep the UI alive even if a restored session is temporarily empty or corrupt.
+    if (activeTab == null) {
+        LaunchedEffect(tabsViewModel) { tabsViewModel.createTab() }
+        return
+    }
 
     if (activeTab.url.isNullOrBlank()) {
         HomeScreen(
