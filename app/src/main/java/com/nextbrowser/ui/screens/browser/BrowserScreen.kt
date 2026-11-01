@@ -60,7 +60,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import java.net.URLEncoder
 import kotlinx.coroutines.delay
 import com.nextbrowser.data.engine.WebViewBrowserEngine
 import com.nextbrowser.domain.engine.BrowserEngine
@@ -507,48 +506,3 @@ internal fun browserModeUserAgent(defaultUserAgent: String, desktopMode: Boolean
     return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$chromeVersion Safari/537.36"
 }
-
-internal fun resolveAddress(
-    input: String,
-    searchEngine: String = com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_GOOGLE
-): String {
-    val value = input.trim()
-    if (value.isEmpty()) return "https://www.google.com"
-
-    if (value.startsWith("https://", ignoreCase = true) ||
-        value.startsWith("http://", ignoreCase = true)
-    ) return value
-
-    // Local development endpoints commonly do not provide TLS certificates.
-    val isLocalHost = value.equals("localhost", ignoreCase = true) ||
-        value.startsWith("localhost:", ignoreCase = true) ||
-        value.equals("10.0.2.2", ignoreCase = true) ||
-        value.startsWith("10.0.2.2:", ignoreCase = true)
-    val looksLikeHost = !value.contains(" ") &&
-        (isLocalHost || HOST_WITH_OPTIONAL_PORT.matches(value))
-
-    if (looksLikeHost) {
-        return "${if (isLocalHost) "http" else "https"}://$value"
-    }
-
-    val encodedQuery = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
-    val query = when (searchEngine.lowercase()) {
-        com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_BING ->
-            "https://www.bing.com/search?q=$encodedQuery"
-        com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_DUCKDUCKGO ->
-            "https://duckduckgo.com/?q=$encodedQuery"
-        else -> "https://www.google.com/search?q=$encodedQuery"
-    }
-    return query
-}
-
-private val HOST_WITH_OPTIONAL_PORT = Regex(
-    "^(?=.{1,253}$)(?:" +
-        // Accept valid dotted IPv4 addresses as hosts, not search terms.
-        "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])" +
-        "(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}" +
-        "|" +
-        // Or a conventional domain name with a valid-looking alphabetic TLD.
-        "(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}" +
-        ")(?::[0-9]{1,5})?(?:/[^\\s]*)?$"
-)
