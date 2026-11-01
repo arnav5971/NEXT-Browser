@@ -1,12 +1,18 @@
 package com.nextbrowser.ui.screens.browser
 
+import android.app.Activity
 import android.graphics.Bitmap
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
 import android.os.Bundle
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebSettings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,6 +26,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -60,6 +68,8 @@ import com.nextbrowser.domain.engine.BrowserEngine
 fun BrowserScreen(
     initialUrl: String,
     searchEngine: String = com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_GOOGLE,
+    desktopMode: Boolean,
+    onToggleDesktopMode: () -> Unit,
     onGoHome: () -> Unit,
     onShowTabs: () -> Unit,
     tabCount: Int,
@@ -71,9 +81,10 @@ fun BrowserScreen(
     onDownloadRequested: (String, String?, String?, String?, Long) -> Unit,
     onShowDownloads: () -> Unit,
     savedWebViewState: Bundle? = null,
-    onSaveWebViewState: (Bundle, String?) -> Unit = { _, _ -> }
+    onSaveWebViewState: (Bundle, String?, Boolean) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val currentIsPrivateTab by rememberUpdatedState(isPrivateTab)
     val currentDownloadHandler by rememberUpdatedState(onDownloadRequested)
     val currentUrlChangeHandler by rememberUpdatedState(onUrlChanged)
@@ -132,7 +143,7 @@ fun BrowserScreen(
                 webViewInstance?.let { view ->
                     val state = Bundle()
                     view.saveState(state)
-                    currentSaveWebViewStateHandler(state, view.url)
+                    currentSaveWebViewStateHandler(state, view.url, desktopMode)
                 }
                 engine.destroy()
                 webViewInstance = null
@@ -183,6 +194,12 @@ fun BrowserScreen(
             IconButton(onClick = { browserEngine?.currentUrl?.let { onAddBookmark(it, pageTitle) } }, enabled = browserEngine?.currentUrl?.startsWith("http") == true && !isPrivateTab) {
                 Icon(Icons.Default.BookmarkAdd, contentDescription = if (isPrivateTab) "Bookmarks unavailable in private tabs" else "Add bookmark")
             }
+            IconButton(onClick = onToggleDesktopMode) {
+                Icon(
+                    imageVector = if (desktopMode) Icons.Default.Smartphone else Icons.Default.Computer,
+                    contentDescription = if (desktopMode) "Switch to mobile site" else "Request desktop site"
+                )
+            }
             IconButton(onClick = onShowTabs) {
                 Icon(Icons.Default.Tab, contentDescription = "Open tabs")
             }
@@ -211,19 +228,30 @@ fun BrowserScreen(
                     webViewInstance = this
                     val engine = WebViewBrowserEngine(this)
                     browserEngine = engine
+                    // Apply the selected site identity before restoring state or loading a URL.
+                    val defaultUserAgent = WebSettings.getDefaultUserAgent(context)
+                    settings.userAgentString = browserModeUserAgent(defaultUserAgent, desktopMode)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
-                    settings.javaScriptCanOpenWindowsAutomatically = false
+                    settings.javaScriptCanOpenWindowsAutomatically = true
                     settings.setSupportMultipleWindows(false)
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
-                    settings.mixedContentMode =
-                        android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     settings.safeBrowsingEnabled = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = desktopMode
+                    settings.textZoom = 100
+                    settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
                     settings.setSupportZoom(true)
                     settings.builtInZoomControls = true
                     settings.displayZoomControls = false
+                    CookieManager.getInstance().apply {
+                        setAcceptCookie(true)
+                        setAcceptThirdPartyCookies(this@apply, true)
+                    }
 
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(
@@ -320,12 +348,12 @@ fun BrowserScreen(
                     }
 
                     webChromeClient = object : WebChromeClient() {
+                        private var customView: View? = null
+                        private var customViewCallback: CustomViewCallback? = null
+
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             progress = newProgress
-                            // Do not let late progress callbacks undo a terminal load error.
-                            if (pageError == null) {
-                                isLoading = newProgress < 100
-                            }
+                            if (pageError == null) isLoading = newProgress < 100
                         }
 
                         override fun onReceivedTitle(view: WebView?, title: String?) {
@@ -333,6 +361,35 @@ fun BrowserScreen(
                                 pageTitle = title
                                 currentTitleChangeHandler(title)
                             }
+                        }
+
+                        override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                            val host = activity?.window?.decorView as? FrameLayout
+                            if (view == null || host == null || customView != null) {
+                                callback?.onCustomViewHidden()
+                                return
+                            }
+                            customView = view
+                            customViewCallback = callback
+                            host.addView(view, FrameLayout.LayoutParams(
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                                FrameLayout.LayoutParams.MATCH_PARENT
+                            ))
+                            webViewInstance?.visibility = View.GONE
+                            activity.window.setFlags(
+                                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                                WindowManager.LayoutParams.FLAG_FULLSCREEN
+                            )
+                        }
+
+                        override fun onHideCustomView() {
+                            val host = activity?.window?.decorView as? FrameLayout
+                            customView?.let { host?.removeView(it) }
+                            customView = null
+                            webViewInstance?.visibility = View.VISIBLE
+                            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                            customViewCallback?.onCustomViewHidden()
+                            customViewCallback = null
                         }
                     }
 
@@ -423,6 +480,21 @@ fun BrowserScreen(
             }
         }
     }
+}
+
+internal fun browserModeUserAgent(defaultUserAgent: String, desktopMode: Boolean): String {
+    if (!desktopMode) {
+        return defaultUserAgent
+            .replace("; wv)", ")")
+            .replace("Version/4.0 ", "")
+    }
+    val chromeVersion = Regex("Chrome/([0-9.]+)")
+        .find(defaultUserAgent)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?: return defaultUserAgent
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$chromeVersion Safari/537.36"
 }
 
 internal fun resolveAddress(
