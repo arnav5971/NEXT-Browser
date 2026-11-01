@@ -122,6 +122,7 @@ private fun NextBrowserApp(
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
             onNewTab = { tabsViewModel.createTab() },
+            onCloseTab = { tabsViewModel.closeTab(activeTab.id) },
             onShowBookmarks = { libraryMode = "bookmarks" },
             onShowHistory = { libraryMode = "history" },
             onShowSettings = { showSettingsDialog = true }
