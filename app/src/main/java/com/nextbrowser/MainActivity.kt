@@ -475,7 +475,7 @@ private fun mobileBrowserUserAgent(context: Context): String {
 }
 
 private fun desktopBrowserUserAgent(context: Context): String =
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
         "${chromeVersion(context)} Safari/537.36"
 
 /**
@@ -490,6 +490,7 @@ private fun configureBrowserMode(context: Context, view: WebView, desktop: Boole
         databaseEnabled = true
         loadsImagesAutomatically = true
         javaScriptCanOpenWindowsAutomatically = true
+        mediaPlaybackRequiresUserGesture = false
         setSupportMultipleWindows(false)
         setSupportZoom(true)
         builtInZoomControls = true
