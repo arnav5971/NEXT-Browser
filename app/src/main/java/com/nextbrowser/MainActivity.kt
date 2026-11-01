@@ -215,6 +215,7 @@ private fun BrowserApp() {
                     onForward = { webView?.goForward() },
                     onReload = { if (currentUrl.isBlank()) { address = "" } else webView?.reload() },
                     onHome = { currentUrl = ""; address = ""; tabs = tabs.map { if (it.id == activeId) it.copy(url = "") else it }; webView = null },
+                    onNewTab = { newTab() },
                     onTabs = { panel = "Tabs" }
                 )
             }
