@@ -457,23 +457,33 @@ private fun LibraryRow(title: String, url: String, icon: androidx.compose.ui.gra
     }
 }
 
-private fun configureBrowserMode(context: Context, view: WebView, desktop: Boolean) {
-    // Keep Android System WebView's complete native mobile UA. It includes the
-    // WebView/Android tokens that many sites use for mobile layout selection.
-    val nativeAgent = WebSettings.getDefaultUserAgent(context)
-    val chromeVersion = Regex("Chrome/[0-9.]+").find(nativeAgent)?.value ?: "Chrome/120.0.0.0"
-    val desktopAgent = nativeAgent
-        .replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)")
-        .replace("Version/4.0 ", "")
-        .replace(" Mobile", "")
-        .replace("; wv", "")
-        .replace(Regex("\\s+"), " ")
-        .trim()
-        .let { agent ->
-            if (agent.contains("X11; Linux x86_64")) agent
-            else "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion} Safari/537.36"
-        }
+/**
+ * Build explicit browser identities instead of forwarding Android WebView's
+ * default "wv" identity. Several sites treat that identity as an embedded
+ * browser and may return an inconsistent/desktop fallback layout.
+ */
+private fun chromeVersion(context: Context): String {
+    val systemAgent = WebSettings.getDefaultUserAgent(context)
+    return Regex("Chrome/[0-9.]+").find(systemAgent)?.value ?: "Chrome/120.0.0.0"
+}
 
+private fun mobileBrowserUserAgent(context: Context): String {
+    val androidRelease = Build.VERSION.RELEASE.ifBlank { "10" }
+    val deviceModel = Build.MODEL.orEmpty().replace(Regex("[^A-Za-z0-9 _.-]"), "").ifBlank { "Android" }
+    return "Mozilla/5.0 (Linux; Android $androidRelease; $deviceModel) " +
+        "AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion(context)} Mobile Safari/537.36"
+}
+
+private fun desktopBrowserUserAgent(context: Context): String =
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+        "${chromeVersion(context)} Safari/537.36"
+
+/**
+ * One source of truth for both modes.
+ * Mobile: device-width viewport, no overview scaling.
+ * Desktop: wide viewport and overview scaling so desktop layouts fit the phone.
+ */
+private fun configureBrowserMode(context: Context, view: WebView, desktop: Boolean) {
     view.settings.apply {
         javaScriptEnabled = true
         domStorageEnabled = true
@@ -481,55 +491,79 @@ private fun configureBrowserMode(context: Context, view: WebView, desktop: Boole
         loadsImagesAutomatically = true
         javaScriptCanOpenWindowsAutomatically = true
         setSupportMultipleWindows(false)
-        useWideViewPort = true
-        // Mobile pages use their authored device-width viewport. Desktop pages
-        // get a wider layout viewport and are scaled down to fit the phone.
-        loadWithOverviewMode = desktop
         setSupportZoom(true)
         builtInZoomControls = true
         displayZoomControls = false
         textZoom = 100
-        userAgentString = if (desktop) desktopAgent else nativeAgent
         layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
+        useWideViewPort = true
+        loadWithOverviewMode = desktop
+        userAgentString = if (desktop) desktopBrowserUserAgent(context) else mobileBrowserUserAgent(context)
+        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
     }
 }
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun BrowserWebView(
-    url: String, desktop: Boolean, modifier: Modifier, onCreated: (WebView) -> Unit,
-    onProgress: (Int) -> Unit, onPage: (String, String) -> Unit,
+    url: String,
+    desktop: Boolean,
+    modifier: Modifier,
+    onCreated: (WebView) -> Unit,
+    onProgress: (Int) -> Unit,
+    onPage: (String, String) -> Unit,
     onDownload: (String, String?, String?, String?) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
             WebView(ctx).apply {
                 setBackgroundColor(android.graphics.Color.WHITE)
                 configureBrowserMode(ctx, this, desktop)
+
                 webChromeClient = object : WebChromeClient() {
-                    override fun onProgressChanged(view: WebView?, value: Int) { onProgress(value) }
+                    override fun onProgressChanged(view: WebView?, value: Int) {
+                        onProgress(value)
+                    }
                 }
+
                 webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): Boolean {
                         val uri = request?.url ?: return false
                         if (uri.scheme == "http" || uri.scheme == "https") return false
-                        return try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)); true } catch (_: Exception) { true }
+                        return try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                            true
+                        } catch (_: Exception) {
+                            true
+                        }
                     }
+
                     override fun onPageFinished(view: WebView?, finished: String?) {
                         if (!finished.isNullOrBlank()) {
-                            // Do not rewrite the page's viewport meta tag. WebView's
-                            // native viewport handling preserves each site's responsive layout.
-                            onPage(finished, view?.title ?: finished)
+                            // Never inject or overwrite a site's viewport meta tag:
+                            // responsive websites must control their own mobile layout.
+                            onPage(finished, view?.title?.takeIf { it.isNotBlank() } ?: finished)
                         }
                     }
                 }
-                setDownloadListener { downloadUrl, agent, disposition, mime, _ -> onDownload(downloadUrl, agent, disposition, mime) }
+
+                setDownloadListener { downloadUrl, agent, disposition, mime, _ ->
+                    onDownload(downloadUrl, agent, disposition, mime)
+                }
+
                 onCreated(this)
                 if (url.isNotBlank()) loadUrl(url)
             }
         },
         update = { view ->
+            // The parent keys this AndroidView by (tab id, desktop mode), so a
+            // mode change creates a fresh WebView with the correct UA before load.
             configureBrowserMode(context, view, desktop)
             if (url.isNotBlank() && view.url != url) view.loadUrl(url)
         }
