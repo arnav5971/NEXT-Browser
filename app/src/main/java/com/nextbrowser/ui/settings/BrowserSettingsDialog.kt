@@ -21,6 +21,7 @@ fun BrowserSettingsDialog(
     onThemeChange: (String) -> Unit,
     onSearchEngineChange: (String) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onDesktopSiteChange: (Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -45,6 +46,13 @@ fun BrowserSettingsDialog(
                 ) {
                     Text("Dynamic colors", modifier = Modifier.weight(1f))
                     Switch(checked = settings.dynamicColor, onCheckedChange = onDynamicColorChange)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Desktop site", modifier = Modifier.weight(1f))
+                    Switch(checked = settings.desktopSite, onCheckedChange = onDesktopSiteChange)
                 }
                 Text("Search engine", modifier = Modifier.padding(top = 12.dp))
                 listOf(
