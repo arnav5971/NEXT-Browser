@@ -4,7 +4,8 @@ data class BrowserSettings(
     val themeMode: String = THEME_SYSTEM,
     val dynamicColor: Boolean = true,
     val accentColorHex: String = "",
-    val searchEngine: String = SEARCH_ENGINE_GOOGLE
+    val searchEngine: String = SEARCH_ENGINE_GOOGLE,
+    val desktopSite: Boolean = false
 ) {
     companion object {
         const val THEME_SYSTEM = "system"

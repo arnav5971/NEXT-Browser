@@ -23,6 +23,7 @@ class DefaultBrowserSettingsRepositoryTest {
         repository.setDynamicColorEnabled(false)
         repository.setAccentColor("#315CDB")
         repository.setSearchEngine(BrowserSettings.SEARCH_ENGINE_DUCKDUCKGO)
+        repository.setDesktopSiteEnabled(true)
 
         val actual = repository.settings.first()
 
@@ -30,6 +31,7 @@ class DefaultBrowserSettingsRepositoryTest {
         assertEquals(false, actual.dynamicColor)
         assertEquals("#315CDB", actual.accentColorHex)
         assertEquals(BrowserSettings.SEARCH_ENGINE_DUCKDUCKGO, actual.searchEngine)
+        assertEquals(true, actual.desktopSite)
 
         file.delete()
         }

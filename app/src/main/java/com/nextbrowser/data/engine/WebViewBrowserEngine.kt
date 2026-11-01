@@ -11,39 +11,45 @@ import com.nextbrowser.domain.engine.BrowserEngine
 class WebViewBrowserEngine(
     private val webView: WebView
 ) : BrowserEngine {
+    private var destroyed = false
+
     override val currentUrl: String?
-        get() = webView.url
+        get() = if (destroyed) null else runCatching { webView.url }.getOrNull()
 
     override val canGoBack: Boolean
-        get() = webView.canGoBack()
+        get() = !destroyed && runCatching { webView.canGoBack() }.getOrDefault(false)
 
     override val canGoForward: Boolean
-        get() = webView.canGoForward()
+        get() = !destroyed && runCatching { webView.canGoForward() }.getOrDefault(false)
 
     override fun loadUrl(url: String) {
-        webView.loadUrl(url)
+        if (!destroyed) runCatching { webView.loadUrl(url) }
     }
 
     override fun goBack() {
-        if (webView.canGoBack()) webView.goBack()
+        if (canGoBack) runCatching { webView.goBack() }
     }
 
     override fun goForward() {
-        if (webView.canGoForward()) webView.goForward()
+        if (canGoForward) runCatching { webView.goForward() }
     }
 
     override fun reload() {
-        webView.reload()
+        if (!destroyed) runCatching { webView.reload() }
     }
 
     override fun stopLoading() {
-        webView.stopLoading()
+        if (!destroyed) runCatching { webView.stopLoading() }
     }
 
     override fun destroy() {
-        webView.stopLoading()
-        webView.webChromeClient = null
-        webView.webViewClient = WebViewClient()
-        webView.destroy()
+        if (destroyed) return
+        destroyed = true
+        // Renderer shutdown can race with Activity/Compose disposal. Cleanup must
+        // remain idempotent and must not crash the host app if WebView is already gone.
+        runCatching { webView.stopLoading() }
+        runCatching { webView.webChromeClient = null }
+        runCatching { webView.webViewClient = WebViewClient() }
+        runCatching { webView.destroy() }
     }
 }

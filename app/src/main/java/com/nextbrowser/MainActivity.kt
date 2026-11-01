@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,7 +113,13 @@ private fun NextBrowserApp(
     var showTabSwitcher by remember { mutableStateOf(false) }
     var showDownloadsDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-    val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
+    val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.firstOrNull()
+
+    // Keep the UI alive even if a restored session is temporarily empty or corrupt.
+    if (activeTab == null) {
+        LaunchedEffect(tabsViewModel) { tabsViewModel.createTab() }
+        return
+    }
 
     if (activeTab.url.isNullOrBlank()) {
         HomeScreen(
@@ -121,15 +128,19 @@ private fun NextBrowserApp(
             },
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
+            onNewTab = { tabsViewModel.createTab() },
+            onCloseTab = { tabsViewModel.closeTab(activeTab.id) },
             onShowBookmarks = { libraryMode = "bookmarks" },
             onShowHistory = { libraryMode = "history" },
             onShowSettings = { showSettingsDialog = true }
         )
     } else {
-        key(activeTab.id) {
+        key(activeTab.id, browserSettings.desktopSite) {
         BrowserScreen(
             initialUrl = activeTab.url.orEmpty(),
             searchEngine = browserSettings.searchEngine,
+            desktopMode = browserSettings.desktopSite,
+            onToggleDesktopMode = { settingsViewModel.setDesktopSiteEnabled(!browserSettings.desktopSite) },
             onGoHome = {
                 tabsViewModel.updateTab(activeTab.id) { it.copy(url = null, title = "New tab") }
             },
@@ -181,9 +192,9 @@ private fun NextBrowserApp(
                 }
             },
             onShowDownloads = { showDownloadsDialog = true },
-            savedWebViewState = tabsViewModel.webViewState(activeTab.id, activeTab.url),
-            onSaveWebViewState = { state, url ->
-                tabsViewModel.saveWebViewState(activeTab.id, state, url)
+            savedWebViewState = tabsViewModel.webViewState(activeTab.id, activeTab.url, browserSettings.desktopSite),
+            onSaveWebViewState = { state, url, savedDesktopMode ->
+                tabsViewModel.saveWebViewState(activeTab.id, state, url, savedDesktopMode)
             }
         )
         }
@@ -211,6 +222,7 @@ private fun NextBrowserApp(
             onThemeChange = settingsViewModel::setThemeMode,
             onSearchEngineChange = settingsViewModel::setSearchEngine,
             onDynamicColorChange = settingsViewModel::setDynamicColorEnabled,
+            onDesktopSiteChange = settingsViewModel::setDesktopSiteEnabled,
             onDismiss = { showSettingsDialog = false }
         )
     }

@@ -27,7 +27,8 @@ class DefaultBrowserSettingsRepository @Inject constructor(
                 themeMode = preferences[Keys.THEME_MODE] ?: BrowserSettings.THEME_SYSTEM,
                 dynamicColor = preferences[Keys.DYNAMIC_COLOR] ?: true,
                 accentColorHex = preferences[Keys.ACCENT_COLOR].orEmpty(),
-                searchEngine = preferences[Keys.SEARCH_ENGINE] ?: BrowserSettings.SEARCH_ENGINE_GOOGLE
+                searchEngine = preferences[Keys.SEARCH_ENGINE] ?: BrowserSettings.SEARCH_ENGINE_GOOGLE,
+                desktopSite = preferences[Keys.DESKTOP_SITE] ?: false
             )
         }
 
@@ -60,11 +61,16 @@ class DefaultBrowserSettingsRepository @Inject constructor(
         dataStore.edit { it[Keys.SEARCH_ENGINE] = engine }
     }
 
+    override suspend fun setDesktopSiteEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.DESKTOP_SITE] = enabled }
+    }
+
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val SEARCH_ENGINE = stringPreferencesKey("search_engine")
+        val DESKTOP_SITE = booleanPreferencesKey("desktop_site")
     }
 
     private companion object {

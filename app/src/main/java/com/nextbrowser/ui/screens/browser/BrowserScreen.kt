@@ -1,12 +1,18 @@
 package com.nextbrowser.ui.screens.browser
 
+import android.app.Activity
 import android.graphics.Bitmap
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
 import android.os.Bundle
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebSettings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,6 +26,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -40,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -51,7 +60,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import java.net.URLEncoder
 import kotlinx.coroutines.delay
 import com.nextbrowser.data.engine.WebViewBrowserEngine
 import com.nextbrowser.domain.engine.BrowserEngine
@@ -60,6 +68,8 @@ import com.nextbrowser.domain.engine.BrowserEngine
 fun BrowserScreen(
     initialUrl: String,
     searchEngine: String = com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_GOOGLE,
+    desktopMode: Boolean,
+    onToggleDesktopMode: () -> Unit,
     onGoHome: () -> Unit,
     onShowTabs: () -> Unit,
     tabCount: Int,
@@ -71,9 +81,10 @@ fun BrowserScreen(
     onDownloadRequested: (String, String?, String?, String?, Long) -> Unit,
     onShowDownloads: () -> Unit,
     savedWebViewState: Bundle? = null,
-    onSaveWebViewState: (Bundle, String?) -> Unit = { _, _ -> }
+    onSaveWebViewState: (Bundle, String?, Boolean) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val currentIsPrivateTab by rememberUpdatedState(isPrivateTab)
     val currentDownloadHandler by rememberUpdatedState(onDownloadRequested)
     val currentUrlChangeHandler by rememberUpdatedState(onUrlChanged)
@@ -88,6 +99,7 @@ fun BrowserScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var pageError by remember { mutableStateOf<String?>(null) }
+    var rendererGeneration by remember { mutableStateOf(0) }
     var browserEngine by remember { mutableStateOf<BrowserEngine?>(null) }
 
     // A tab switch can change initialUrl while this composable stays in place.
@@ -132,7 +144,7 @@ fun BrowserScreen(
                 webViewInstance?.let { view ->
                     val state = Bundle()
                     view.saveState(state)
-                    currentSaveWebViewStateHandler(state, view.url)
+                    currentSaveWebViewStateHandler(state, view.url, desktopMode)
                 }
                 engine.destroy()
                 webViewInstance = null
@@ -183,6 +195,12 @@ fun BrowserScreen(
             IconButton(onClick = { browserEngine?.currentUrl?.let { onAddBookmark(it, pageTitle) } }, enabled = browserEngine?.currentUrl?.startsWith("http") == true && !isPrivateTab) {
                 Icon(Icons.Default.BookmarkAdd, contentDescription = if (isPrivateTab) "Bookmarks unavailable in private tabs" else "Add bookmark")
             }
+            IconButton(onClick = onToggleDesktopMode) {
+                Icon(
+                    imageVector = if (desktopMode) Icons.Default.Smartphone else Icons.Default.Computer,
+                    contentDescription = if (desktopMode) "Switch to mobile site" else "Request desktop site"
+                )
+            }
             IconButton(onClick = onShowTabs) {
                 Icon(Icons.Default.Tab, contentDescription = "Open tabs")
             }
@@ -202,6 +220,7 @@ fun BrowserScreen(
             )
         }
 
+        key(rendererGeneration) {
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
@@ -211,19 +230,28 @@ fun BrowserScreen(
                     webViewInstance = this
                     val engine = WebViewBrowserEngine(this)
                     browserEngine = engine
+                    // Apply the selected site identity before restoring state or loading a URL.
+                    val defaultUserAgent = WebSettings.getDefaultUserAgent(context)
+                    settings.userAgentString = browserModeUserAgent(defaultUserAgent, desktopMode)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
-                    settings.javaScriptCanOpenWindowsAutomatically = false
+                    settings.javaScriptCanOpenWindowsAutomatically = true
                     settings.setSupportMultipleWindows(false)
                     settings.allowFileAccess = false
                     settings.allowContentAccess = false
-                    settings.mixedContentMode =
-                        android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     settings.safeBrowsingEnabled = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = desktopMode
+                    settings.textZoom = 100
+                    settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
                     settings.setSupportZoom(true)
                     settings.builtInZoomControls = true
                     settings.displayZoomControls = false
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(
@@ -262,7 +290,11 @@ fun BrowserScreen(
                             // must remain visible until a new navigation successfully commits.
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
                             currentTitleChangeHandler(pageTitle)
-                            currentPageVisitedHandler(url ?: addressText, pageTitle)
+                            // onPageFinished may fire for subframes too. Only the top-level
+                            // document belongs in the browser's address bar and history.
+                            if (!url.isNullOrBlank() && view?.url == url) {
+                                currentPageVisitedHandler(url, pageTitle)
+                            }
                             progress = 100
                             isLoading = false
                             canGoBack = browserEngine?.canGoBack == true
@@ -307,8 +339,13 @@ fun BrowserScreen(
                             view: WebView?,
                             detail: android.webkit.RenderProcessGoneDetail?
                         ): Boolean {
-                            pageError = "The web page renderer stopped. Reload the page to try again."
+                            pageError = "The web page renderer stopped. Reopening the page…"
                             isLoading = false
+                            // A WebView whose renderer has exited cannot be reliably reused.
+                            // Remove it and let Compose create a fresh WebView for this tab.
+                            webViewInstance = null
+                            browserEngine = null
+                            rendererGeneration += 1
                             return true
                         }
                     }
@@ -320,12 +357,12 @@ fun BrowserScreen(
                     }
 
                     webChromeClient = object : WebChromeClient() {
+                        private var customView: View? = null
+                        private var customViewCallback: CustomViewCallback? = null
+
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             progress = newProgress
-                            // Do not let late progress callbacks undo a terminal load error.
-                            if (pageError == null) {
-                                isLoading = newProgress < 100
-                            }
+                            if (pageError == null) isLoading = newProgress < 100
                         }
 
                         override fun onReceivedTitle(view: WebView?, title: String?) {
@@ -333,6 +370,35 @@ fun BrowserScreen(
                                 pageTitle = title
                                 currentTitleChangeHandler(title)
                             }
+                        }
+
+                        override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                            val host = activity?.window?.decorView as? FrameLayout
+                            if (view == null || host == null || customView != null) {
+                                callback?.onCustomViewHidden()
+                                return
+                            }
+                            customView = view
+                            customViewCallback = callback
+                            host.addView(view, FrameLayout.LayoutParams(
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                                FrameLayout.LayoutParams.MATCH_PARENT
+                            ))
+                            webViewInstance?.visibility = View.GONE
+                            activity?.window?.setFlags(
+                                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                                WindowManager.LayoutParams.FLAG_FULLSCREEN
+                            )
+                        }
+
+                        override fun onHideCustomView() {
+                            val host = activity?.window?.decorView as? FrameLayout
+                            customView?.let { host?.removeView(it) }
+                            customView = null
+                            webViewInstance?.visibility = View.VISIBLE
+                            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                            customViewCallback?.onCustomViewHidden()
+                            customViewCallback = null
                         }
                     }
 
@@ -354,6 +420,7 @@ fun BrowserScreen(
                 }
             }
         )
+        }
 
         if (pageError != null) {
             Surface(
@@ -425,47 +492,17 @@ fun BrowserScreen(
     }
 }
 
-internal fun resolveAddress(
-    input: String,
-    searchEngine: String = com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_GOOGLE
-): String {
-    val value = input.trim()
-    if (value.isEmpty()) return "https://www.google.com"
-
-    if (value.startsWith("https://", ignoreCase = true) ||
-        value.startsWith("http://", ignoreCase = true)
-    ) return value
-
-    // Local development endpoints commonly do not provide TLS certificates.
-    val isLocalHost = value.equals("localhost", ignoreCase = true) ||
-        value.startsWith("localhost:", ignoreCase = true) ||
-        value.equals("10.0.2.2", ignoreCase = true) ||
-        value.startsWith("10.0.2.2:", ignoreCase = true)
-    val looksLikeHost = !value.contains(" ") &&
-        (isLocalHost || HOST_WITH_OPTIONAL_PORT.matches(value))
-
-    if (looksLikeHost) {
-        return "${if (isLocalHost) "http" else "https"}://$value"
+internal fun browserModeUserAgent(defaultUserAgent: String, desktopMode: Boolean): String {
+    if (!desktopMode) {
+        return defaultUserAgent
+            .replace("; wv)", ")")
+            .replace("Version/4.0 ", "")
     }
-
-    val encodedQuery = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
-    val query = when (searchEngine.lowercase()) {
-        com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_BING ->
-            "https://www.bing.com/search?q=$encodedQuery"
-        com.nextbrowser.domain.model.BrowserSettings.SEARCH_ENGINE_DUCKDUCKGO ->
-            "https://duckduckgo.com/?q=$encodedQuery"
-        else -> "https://www.google.com/search?q=$encodedQuery"
-    }
-    return query
+    val chromeVersion = Regex("Chrome/([0-9.]+)")
+        .find(defaultUserAgent)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?: return defaultUserAgent
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$chromeVersion Safari/537.36"
 }
-
-private val HOST_WITH_OPTIONAL_PORT = Regex(
-    "^(?=.{1,253}$)(?:" +
-        // Accept valid dotted IPv4 addresses as hosts, not search terms.
-        "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])" +
-        "(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}" +
-        "|" +
-        // Or a conventional domain name with a valid-looking alphabetic TLD.
-        "(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}" +
-        ")(?::[0-9]{1,5})?(?:/[^\\s]*)?$"
-)

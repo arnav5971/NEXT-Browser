@@ -20,7 +20,8 @@ class BrowserTabsViewModel @Inject constructor(
         listOf(BrowserTab(id = UUID.randomUUID().toString()))
     }
 
-    private val webViewStates = mutableMapOf<String, Pair<Bundle, String?>>()
+    private data class SavedWebViewState(val bundle: Bundle, val url: String?, val desktopMode: Boolean)
+    private val webViewStates = mutableMapOf<String, SavedWebViewState>()
 
     private val _tabs = MutableStateFlow(initialTabs)
     val tabs: StateFlow<List<BrowserTab>> = _tabs.asStateFlow()
@@ -74,12 +75,14 @@ class BrowserTabsViewModel @Inject constructor(
         persistSession()
     }
 
-    fun webViewState(tabId: String, expectedUrl: String?): Bundle? =
-        webViewStates[tabId]?.takeIf { it.second == expectedUrl }?.first
+    fun webViewState(tabId: String, expectedUrl: String?, desktopMode: Boolean): Bundle? =
+        webViewStates[tabId]?.takeIf {
+            it.url == expectedUrl && it.desktopMode == desktopMode
+        }?.bundle
 
-    fun saveWebViewState(tabId: String, state: Bundle, url: String?) {
+    fun saveWebViewState(tabId: String, state: Bundle, url: String?, desktopMode: Boolean) {
         if (_tabs.value.any { it.id == tabId }) {
-            webViewStates[tabId] = state to url
+            webViewStates[tabId] = SavedWebViewState(state, url, desktopMode)
         }
     }
 
