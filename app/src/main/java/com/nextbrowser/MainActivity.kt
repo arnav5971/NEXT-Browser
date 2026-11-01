@@ -170,7 +170,8 @@ private fun BrowserApp() {
                         tabs = rest
                         if (activeId == id) { activeId = rest.first().id; address = rest.first().url; currentUrl = rest.first().url; webView = null }
                     },
-                    onClearHistory = { history = emptyList(); persist(HISTORY, emptyList()) }
+                    onClearHistory = { history = emptyList(); persist(HISTORY, emptyList()) },
+                    onNewPrivateTab = { newTab(privateMode = true); panel = "" }
                 )
                 currentUrl.isBlank() && active.url.isBlank() -> HomePage(
                     Modifier.padding(padding), active.privateMode,
@@ -277,7 +278,7 @@ private fun BrowserWebView(
 private fun BrowserPanel(
     panel: String, tabs: List<TabState>, bookmarks: List<Pair<String, String>>, history: List<Pair<String, String>>,
     onClose: () -> Unit, onOpen: (String) -> Unit, onNewTab: () -> Unit,
-    onSelectTab: (Int) -> Unit, onCloseTab: (Int) -> Unit, onClearHistory: () -> Unit
+    onSelectTab: (Int) -> Unit, onCloseTab: (Int) -> Unit, onClearHistory: () -> Unit, onNewPrivateTab: () -> Unit
 ) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,7 +287,10 @@ private fun BrowserPanel(
         }
         when (panel) {
             "Tabs" -> {
-                Button(onClick = onNewTab) { Icon(Icons.Default.Add, null); Text(" New tab") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onNewTab) { Icon(Icons.Default.Add, null); Text(" New tab") }
+                    OutlinedButton(onClick = onNewPrivateTab) { Icon(Icons.Default.Lock, null); Text(" Private") }
+                }
                 LazyColumn {
                     items(tabs, key = { it.id }) { tab ->
                         ListItem(
