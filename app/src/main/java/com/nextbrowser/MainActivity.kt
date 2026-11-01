@@ -126,10 +126,12 @@ private fun NextBrowserApp(
             onShowSettings = { showSettingsDialog = true }
         )
     } else {
-        key(activeTab.id) {
+        key(activeTab.id, browserSettings.desktopSite) {
         BrowserScreen(
             initialUrl = activeTab.url.orEmpty(),
             searchEngine = browserSettings.searchEngine,
+            desktopMode = browserSettings.desktopSite,
+            onToggleDesktopMode = { settingsViewModel.setDesktopSiteEnabled(!browserSettings.desktopSite) },
             onGoHome = {
                 tabsViewModel.updateTab(activeTab.id) { it.copy(url = null, title = "New tab") }
             },
@@ -181,9 +183,9 @@ private fun NextBrowserApp(
                 }
             },
             onShowDownloads = { showDownloadsDialog = true },
-            savedWebViewState = tabsViewModel.webViewState(activeTab.id, activeTab.url),
-            onSaveWebViewState = { state, url ->
-                tabsViewModel.saveWebViewState(activeTab.id, state, url)
+            savedWebViewState = tabsViewModel.webViewState(activeTab.id, activeTab.url, browserSettings.desktopSite),
+            onSaveWebViewState = { state, url, savedDesktopMode ->
+                tabsViewModel.saveWebViewState(activeTab.id, state, url, savedDesktopMode)
             }
         )
         }
@@ -211,6 +213,7 @@ private fun NextBrowserApp(
             onThemeChange = settingsViewModel::setThemeMode,
             onSearchEngineChange = settingsViewModel::setSearchEngine,
             onDynamicColorChange = settingsViewModel::setDynamicColorEnabled,
+            onDesktopSiteChange = settingsViewModel::setDesktopSiteEnabled,
             onDismiss = { showSettingsDialog = false }
         )
     }
