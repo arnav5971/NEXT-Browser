@@ -81,7 +81,7 @@ fun HomeScreen(
                     Icon(Icons.Default.Language, null, tint = blue)
                     Spacer(Modifier.width(12.dp))
                     Text("New tab", color = ink, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onShowTabs, modifier = Modifier.size(34.dp)) {
+                    IconButton(onClick = onCloseTab, modifier = Modifier.size(34.dp)) {
                         Icon(Icons.Default.Close, "Close tab", tint = muted)
                     }
                 }
