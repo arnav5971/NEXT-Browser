@@ -52,6 +52,7 @@ fun HomeScreen(
     onShowTabs: () -> Unit,
     tabCount: Int,
     onNewTab: () -> Unit = onShowTabs,
+    onCloseTab: () -> Unit = onShowTabs,
     onShowBookmarks: () -> Unit,
     onShowHistory: () -> Unit,
     onShowSettings: () -> Unit = {}
@@ -98,7 +99,7 @@ fun HomeScreen(
         ) {
             IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowBack, "Back", tint = muted) }
             IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.ArrowForward, "Forward", tint = muted) }
-            IconButton(onClick = { searchText = "" }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Refresh, "Refresh", tint = muted) }
+            IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Refresh, "Refresh", tint = muted) }
             IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Home, "Home", tint = muted) }
             Surface(
                 modifier = Modifier.weight(1f).height(40.dp),
