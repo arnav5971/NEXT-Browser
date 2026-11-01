@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -99,6 +100,7 @@ fun BrowserScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var pageError by remember { mutableStateOf<String?>(null) }
+    var rendererGeneration by remember { mutableStateOf(0) }
     var browserEngine by remember { mutableStateOf<BrowserEngine?>(null) }
 
     // A tab switch can change initialUrl while this composable stays in place.
@@ -219,6 +221,7 @@ fun BrowserScreen(
             )
         }
 
+        key(rendererGeneration) {
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
@@ -288,7 +291,11 @@ fun BrowserScreen(
                             // must remain visible until a new navigation successfully commits.
                             pageTitle = view?.title?.takeIf { it.isNotBlank() } ?: "Web page"
                             currentTitleChangeHandler(pageTitle)
-                            currentPageVisitedHandler(url ?: addressText, pageTitle)
+                            // onPageFinished may fire for subframes too. Only the top-level
+                            // document belongs in the browser's address bar and history.
+                            if (!url.isNullOrBlank() && view?.url == url) {
+                                currentPageVisitedHandler(url, pageTitle)
+                            }
                             progress = 100
                             isLoading = false
                             canGoBack = browserEngine?.canGoBack == true
@@ -333,8 +340,13 @@ fun BrowserScreen(
                             view: WebView?,
                             detail: android.webkit.RenderProcessGoneDetail?
                         ): Boolean {
-                            pageError = "The web page renderer stopped. Reload the page to try again."
+                            pageError = "The web page renderer stopped. Reopening the page…"
                             isLoading = false
+                            // A WebView whose renderer has exited cannot be reliably reused.
+                            // Remove it and let Compose create a fresh WebView for this tab.
+                            webViewInstance = null
+                            browserEngine = null
+                            rendererGeneration += 1
                             return true
                         }
                     }
@@ -409,6 +421,7 @@ fun BrowserScreen(
                 }
             }
         )
+        }
 
         if (pageError != null) {
             Surface(
