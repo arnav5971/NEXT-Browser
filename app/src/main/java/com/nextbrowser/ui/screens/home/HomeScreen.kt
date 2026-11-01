@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +46,7 @@ fun HomeScreen(
     onSearch: (String) -> Unit,
     onShowTabs: () -> Unit,
     tabCount: Int,
+    onNewTab: () -> Unit = onShowTabs,
     onShowBookmarks: () -> Unit,
     onShowHistory: () -> Unit,
     onShowSettings: () -> Unit = {}
@@ -57,7 +59,7 @@ fun HomeScreen(
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Browser tab strip
         Row(
-            Modifier.fillMaxWidth().height(58.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)).padding(start = 16.dp, end = 12.dp),
+            Modifier.fillMaxWidth().height(34.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)).padding(start = 16.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -74,14 +76,14 @@ fun HomeScreen(
                     }
                 }
             }
-            IconButton(onClick = onShowTabs) { Icon(Icons.Default.Add, "New tab", tint = muted) }
+            IconButton(onClick = onNewTab) { Icon(Icons.Default.Add, "New tab", tint = muted) }
             IconButton(onClick = onShowTabs) { Icon(Icons.Default.Tab, "Tabs", tint = muted) }
             Text(tabCount.toString(), color = muted, style = MaterialTheme.typography.labelMedium)
         }
 
         // Navigation / address toolbar
         Row(
-            Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 8.dp, vertical = 7.dp),
+            Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
@@ -90,15 +92,29 @@ fun HomeScreen(
             IconButton(onClick = { searchText = "" }, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Refresh, "Refresh", tint = muted) }
             IconButton(onClick = {}, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Home, "Home", tint = muted) }
             Surface(
-                modifier = Modifier.weight(1f).height(48.dp).clickable { /* focus search below */ },
+                modifier = Modifier.weight(1f).height(40.dp),
                 shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .75f)
             ) {
                 Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Search, null, tint = muted)
                     Spacer(Modifier.width(10.dp))
-                    Text("Search or enter", color = muted, maxLines = 1, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Icon(Icons.Default.StarBorder, "Bookmarks", tint = muted)
+                    BasicTextField(
+                        value = searchText,
+                        onValueChange = { searchText = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = ink),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { if (searchText.isNotBlank()) onSearch(searchText) }),
+                        decorationBox = { inner ->
+                            if (searchText.isEmpty()) Text("Search or enter", color = muted, maxLines = 1, style = MaterialTheme.typography.bodyMedium)
+                            inner()
+                        }
+                    )
+                    IconButton(onClick = onShowBookmarks, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.StarBorder, "Bookmarks", tint = muted)
+                    }
                 }
             }
             IconButton(onClick = onShowTabs, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Add, "New tab", tint = muted) }
@@ -109,7 +125,7 @@ fun HomeScreen(
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp)
         ) {
-            Spacer(Modifier.height(54.dp))
+            Spacer(Modifier.height(34.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(25.dp).clip(CircleShape).background(blue.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(12.dp).clip(CircleShape).background(ColorGreen))
@@ -118,24 +134,24 @@ fun HomeScreen(
                 Text("Y O U R   S P A C E,   Y O U R   P A C E", color = muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
             }
 
-            Spacer(Modifier.height(56.dp))
+            Spacer(Modifier.height(34.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Surface(shape = RoundedCornerShape(30.dp), color = blue.copy(alpha = .12f), modifier = Modifier.size(104.dp)) {
+                Surface(shape = RoundedCornerShape(30.dp), color = blue.copy(alpha = .12f), modifier = Modifier.size(34.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Language, null, tint = blue, modifier = Modifier.size(58.dp))
                     }
                 }
             }
-            Spacer(Modifier.height(38.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
                 "A little more room to\nroam.",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.headlineLarge.copy(fontSize = 35.sp, lineHeight = 43.sp, letterSpacing = (-1.5).sp),
+                style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-1.5).sp),
                 fontWeight = FontWeight.Bold,
                 color = ink
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 "A calmer, faster place to explore the web.",
                 modifier = Modifier.fillMaxWidth(),
@@ -143,14 +159,14 @@ fun HomeScreen(
                 color = muted,
                 style = MaterialTheme.typography.bodyLarge
             )
-            Spacer(Modifier.height(44.dp))
+            Spacer(Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 68.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 singleLine = true,
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.dp),
                 placeholder = { Text("What are you looking for?", color = muted) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = muted) },
                 trailingIcon = {
@@ -169,7 +185,7 @@ fun HomeScreen(
                     focusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Shield, null, tint = ColorGreen, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(7.dp))
@@ -180,7 +196,7 @@ fun HomeScreen(
                 Text("Search or enter a URL", color = muted, style = MaterialTheme.typography.labelMedium)
             }
 
-            Spacer(Modifier.height(72.dp))
+            Spacer(Modifier.height(48.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Quick access", style = MaterialTheme.typography.titleLarge, color = ink, fontWeight = FontWeight.Bold)
@@ -207,7 +223,7 @@ fun HomeScreen(
         // Persistent bottom navigation
         Surface(tonalElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
             Row(
-                Modifier.fillMaxWidth().height(68.dp).navigationBarsPadding().padding(horizontal = 8.dp),
+                Modifier.fillMaxWidth().height(58.dp).navigationBarsPadding().padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -230,17 +246,17 @@ private fun QuickAccessTile(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.height(112.dp).clickable(onClick = onClick),
+        modifier = modifier.height(72.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center) {
-            Surface(shape = RoundedCornerShape(14.dp), color = tint.copy(alpha = .12f), modifier = Modifier.size(48.dp)) {
-                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(29.dp)) }
+            Surface(shape = RoundedCornerShape(14.dp), color = tint.copy(alpha = .12f), modifier = Modifier.size(38.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(23.dp)) }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
         }
     }
