@@ -1,6 +1,7 @@
 package com.nextbrowser
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,9 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -126,26 +130,8 @@ private fun BrowserApp() {
     fun switchDesktop() {
         desktop = !desktop
         store.edit().putBoolean("desktop", desktop).apply()
-
-        // Some mobile sites (notably YouTube's m.youtube.com) stay on a
-        // mobile-only hostname even after the desktop User-Agent changes.
-        // Move an m.* host to www.* when entering desktop mode.
-        if (desktop && currentUrl.isNotBlank()) {
-            val parsed = Uri.parse(currentUrl)
-            val host = parsed.host.orEmpty()
-            if (host.startsWith("m.")) {
-                val desktopUrl = parsed.buildUpon()
-                    .encodedAuthority("www.${host.removePrefix("m.")}")
-                    .build()
-                    .toString()
-                currentUrl = desktopUrl
-                address = desktopUrl
-                tabs = tabs.map { if (it.id == activeId) it.copy(url = desktopUrl) else it }
-            }
-        }
-
-        // Recreate the WebView so the selected User-Agent and viewport
-        // are applied before the current page is requested again.
+        // The keyed WebView is recreated with the new browser identity.
+        // Its current tab URL is loaded again by the new instance.
         webView = null
         progress = 0
     }
@@ -399,7 +385,7 @@ private fun HomePage(
             Spacer(Modifier.height(13.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickTile("Google", "G", Color(0xFF4285F4), Modifier.weight(1f)) { onOpen("https://www.google.com") }
-                QuickTile("YouTube", "▶", Color(0xFFFF0033), Modifier.weight(1f)) { onOpen("https://m.youtube.com") }
+                QuickTile("YouTube", "▶", Color(0xFFFF0033), Modifier.weight(1f)) { onOpen("https://www.youtube.com") }
                 QuickTile("Gmail", "M", Color(0xFFDB4437), Modifier.weight(1f)) { onOpen("https://mail.google.com") }
                 QuickTile("Instagram", "◎", Color(0xFFC13584), Modifier.weight(1f)) { onOpen("https://www.instagram.com") }
             }
@@ -481,29 +467,34 @@ private fun LibraryRow(title: String, url: String, icon: androidx.compose.ui.gra
  * Return the installed Android System WebView's current Chromium version.
  * This keeps both browser identities aligned with the engine actually rendering pages.
  */
-private fun chromiumVersion(context: Context): String {
-    return Regex("Chrome/[0-9.]+")
+/** Read the Chrome engine version supplied by the installed Android System WebView. */
+private fun chromiumVersion(context: Context): String? {
+    return Regex("Chrome/([0-9.]+)")
         .find(WebSettings.getDefaultUserAgent(context))
-        ?.value
-        ?: "Chrome/120.0.0.0"
+        ?.groupValues
+        ?.getOrNull(1)
 }
 
-/** Mobile identity: preserve the device's real Android/model details, but remove WebView markers. */
+/**
+ * Mobile mode uses the device's real Android browser identity.
+ * Only Android WebView-specific markers are removed so sites serve their mobile web UI.
+ */
 private fun mobileModeUserAgent(context: Context): String {
     return WebSettings.getDefaultUserAgent(context)
         .replace("; wv)", ")")
         .replace("Version/4.0 ", "")
 }
 
-/** Desktop identity: request the full desktop site while still using the phone's WebView engine. */
+/** Desktop mode requests the desktop website; rendering is still performed by Android WebView. */
 private fun desktopModeUserAgent(context: Context): String {
+    val version = chromiumVersion(context) ?: return WebSettings.getDefaultUserAgent(context)
     return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-        "AppleWebKit/537.36 (KHTML, like Gecko) ${chromiumVersion(context)} Safari/537.36"
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$version Safari/537.36"
 }
 
 /**
- * Apply one coherent configuration before the first request.
- * A mode change recreates the WebView, so UA and viewport are never mixed on one instance.
+ * Keep WebView's native viewport and scale handling.
+ * No JavaScript viewport injection, fixed CSS width, or forced initial scale is used.
  */
 private fun configureWebViewForMode(context: Context, webView: WebView, desktopMode: Boolean) {
     webView.settings.apply {
@@ -512,6 +503,7 @@ private fun configureWebViewForMode(context: Context, webView: WebView, desktopM
         loadsImagesAutomatically = true
         javaScriptCanOpenWindowsAutomatically = true
         setSupportMultipleWindows(false)
+        mediaPlaybackRequiresUserGesture = false
 
         userAgentString = if (desktopMode) {
             desktopModeUserAgent(context)
@@ -520,10 +512,7 @@ private fun configureWebViewForMode(context: Context, webView: WebView, desktopM
         }
 
         useWideViewPort = true
-        // Never shrink a desktop page to fit the phone screen. Desktop mode uses
-        // a fixed 1024 CSS-pixel viewport and lets the user pan/zoom naturally.
         loadWithOverviewMode = false
-
         setSupportZoom(true)
         builtInZoomControls = true
         displayZoomControls = false
@@ -544,6 +533,7 @@ private fun BrowserWebView(
     onDownload: (String, String?, String?, String?) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? Activity
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
@@ -551,13 +541,45 @@ private fun BrowserWebView(
             WebView(ctx).apply {
                 setBackgroundColor(android.graphics.Color.WHITE)
                 configureWebViewForMode(ctx, this, desktop)
-                // 100% scale gives desktop pages a real desktop-sized canvas;
-                // mobile mode keeps WebView's normal device-responsive scale.
-                setInitialScale(if (desktop) 100 else 0)
 
                 webChromeClient = object : WebChromeClient() {
+                    private var fullScreenView: View? = null
+                    private var fullScreenCallback: CustomViewCallback? = null
+
                     override fun onProgressChanged(view: WebView?, value: Int) {
                         onProgress(value)
+                    }
+
+                    override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                        val host = activity?.window?.decorView as? FrameLayout
+                        if (view == null || host == null || fullScreenView != null) {
+                            callback?.onCustomViewHidden()
+                            return
+                        }
+                        fullScreenView = view
+                        fullScreenCallback = callback
+                        host.addView(
+                            view,
+                            FrameLayout.LayoutParams(
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                                FrameLayout.LayoutParams.MATCH_PARENT
+                            )
+                        )
+                        this@apply.visibility = View.GONE
+                        activity.window.setFlags(
+                            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                            WindowManager.LayoutParams.FLAG_FULLSCREEN
+                        )
+                    }
+
+                    override fun onHideCustomView() {
+                        val host = activity?.window?.decorView as? FrameLayout
+                        fullScreenView?.let { host?.removeView(it) }
+                        fullScreenView = null
+                        this@apply.visibility = View.VISIBLE
+                        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                        fullScreenCallback?.onCustomViewHidden()
+                        fullScreenCallback = null
                     }
                 }
 
@@ -578,23 +600,6 @@ private fun BrowserWebView(
 
                     override fun onPageFinished(view: WebView?, finished: String?) {
                         if (!finished.isNullOrBlank()) {
-                            if (desktop && view != null) {
-                                // Desktop-only viewport override. Mobile mode never
-                                // touches the site's viewport metadata.
-                                view.evaluateJavascript(
-                                    """(function() {
-                                        var meta = document.querySelector('meta[name="viewport"]');
-                                        if (!meta) {
-                                            meta = document.createElement('meta');
-                                            meta.name = 'viewport';
-                                            (document.head || document.documentElement).appendChild(meta);
-                                        }
-                                        meta.setAttribute('content',
-                                            'width=1024, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes');
-                                    })();""".trimIndent(),
-                                    null
-                                )
-                            }
                             onPage(finished, view?.title?.takeIf { it.isNotBlank() } ?: finished)
                         }
                     }
@@ -609,8 +614,6 @@ private fun BrowserWebView(
             }
         },
         update = { view ->
-            // BrowserApp keys this view by tab id and mode. The factory therefore
-            // applies the selected UA + viewport before this URL is requested.
             if (url.isNotBlank() && view.url != url) view.loadUrl(url)
         }
     )
