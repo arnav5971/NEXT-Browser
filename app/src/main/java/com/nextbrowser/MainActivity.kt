@@ -121,6 +121,7 @@ private fun NextBrowserApp(
             },
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
+            onNewTab = { tabsViewModel.createTab() },
             onShowBookmarks = { libraryMode = "bookmarks" },
             onShowHistory = { libraryMode = "history" },
             onShowSettings = { showSettingsDialog = true }
