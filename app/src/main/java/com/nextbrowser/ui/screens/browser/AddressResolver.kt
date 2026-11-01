@@ -23,7 +23,7 @@ internal fun resolveAddress(
     }
 
     val isLocalHost = LOCAL_HOST.matches(value)
-    val looksLikeHost = !value.any(Char::isWhitespace) &&
+    val looksLikeHost = !value.any { it.isWhitespace() } &&
         (isLocalHost || HOST_WITH_OPTIONAL_PORT.matches(value))
 
     if (looksLikeHost) {
