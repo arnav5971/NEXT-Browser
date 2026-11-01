@@ -458,11 +458,21 @@ private fun LibraryRow(title: String, url: String, icon: androidx.compose.ui.gra
 }
 
 private fun configureBrowserMode(context: Context, view: WebView, desktop: Boolean) {
-    val systemAgent = WebSettings.getDefaultUserAgent(context)
-    val chromeVersion = Regex("Chrome/[0-9.]+").find(systemAgent)?.value ?: "Chrome/120.0.0.0"
-    val model = Build.MODEL.replace(Regex("[^A-Za-z0-9 _-]"), "").trim().ifBlank { "Android Device" }
-    val mobileAgent = "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; ${model}) AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion} Mobile Safari/537.36"
-    val desktopAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion} Safari/537.36"
+    // Keep Android System WebView's complete native mobile UA. It includes the
+    // WebView/Android tokens that many sites use for mobile layout selection.
+    val nativeAgent = WebSettings.getDefaultUserAgent(context)
+    val chromeVersion = Regex("Chrome/[0-9.]+").find(nativeAgent)?.value ?: "Chrome/120.0.0.0"
+    val desktopAgent = nativeAgent
+        .replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)")
+        .replace("Version/4.0 ", "")
+        .replace(" Mobile", "")
+        .replace("; wv", "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .let { agent ->
+            if (agent.contains("X11; Linux x86_64")) agent
+            else "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion} Safari/537.36"
+        }
 
     view.settings.apply {
         javaScriptEnabled = true
@@ -472,12 +482,14 @@ private fun configureBrowserMode(context: Context, view: WebView, desktop: Boole
         javaScriptCanOpenWindowsAutomatically = true
         setSupportMultipleWindows(false)
         useWideViewPort = true
+        // Mobile pages use their authored device-width viewport. Desktop pages
+        // get a wider layout viewport and are scaled down to fit the phone.
         loadWithOverviewMode = desktop
         setSupportZoom(true)
         builtInZoomControls = true
         displayZoomControls = false
         textZoom = 100
-        userAgentString = if (desktop) desktopAgent else mobileAgent
+        userAgentString = if (desktop) desktopAgent else nativeAgent
         layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
     }
 }
@@ -506,13 +518,8 @@ private fun BrowserWebView(
                     }
                     override fun onPageFinished(view: WebView?, finished: String?) {
                         if (!finished.isNullOrBlank()) {
-                            val viewport = if (desktop) {
-                                "width=1024, initial-scale=0.75, minimum-scale=0.25, maximum-scale=5, user-scalable=yes"
-                            } else {
-                                "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"
-                            }
-                            val script = "(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}m.setAttribute('content','" + viewport + "');})();"
-                            view?.evaluateJavascript(script, null)
+                            // Do not rewrite the page's viewport meta tag. WebView's
+                            // native viewport handling preserves each site's responsive layout.
                             onPage(finished, view?.title ?: finished)
                         }
                     }
