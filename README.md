@@ -1,62 +1,57 @@
 # NEXT Browser
 ### Browse Beyond Limits.
 
-NEXT Browser is an Android browser project focused on a premium, minimal experience, privacy-conscious defaults, and a modular architecture that can evolve over time.
+NEXT Browser is a private-use Android browser built with Kotlin, Jetpack Compose, Material 3, and Android System WebView.
 
-## Current implementation
+## Product configuration
+- Platform: Android (minimum Android 10 / API 29)
+- Rendering engine: Android System WebView supplied by the device
+- UI: premium native Compose interface; preserve the existing NEXT Browser home-screen design
+- Architecture: modular engine, UI, domain, data, and platform layers
+- AI: backend-mediated assistant; provider secrets must never be bundled in the APK
 
-**Phase 6 — downloads foundation (CI build verified; device testing pending)**
+## Existing implementation
+- Kotlin Android application with Jetpack Compose and Material 3
+- Android System WebView browsing, address/search, navigation, loading and error handling
+- Separate Mobile/Desktop User-Agent handling and viewport configuration
+- WebView renderer-crash recovery and guarded cleanup
+- Regular-tab session metadata persistence
+- Room-backed bookmarks and browsing history
+- Native Android DownloadManager integration and in-app download status
+- Theme and search-engine preferences
+- GitHub Actions workflow for Gradle validation, unit tests, lint, and debug APK artifact
 
-- [x] Kotlin Android application foundation with Jetpack Compose and Material 3
-- [x] Android System WebView-based browsing, address/search, navigation controls and basic security settings
-- [x] In-memory tab management and regular-tab URL/title session metadata persistence
-- [x] Room database with bookmark and browsing-history tables
-- [x] Add bookmarks from the browser toolbar; duplicate bookmark URLs update the existing entry
-- [x] Browse, search and delete bookmarks
-- [x] Record successful page visits from regular tabs; private-labelled tabs are excluded
-- [x] Browse/search history and clear all history
-- [x] Native Android DownloadManager integration for HTTP(S) downloads
-- [x] Download completion notifications and in-app download list with progress/status
-- [x] Open completed downloads and cancel/remove unfinished or failed items
-- [ ] Bookmark folder creation, rename and move UI
-- [ ] History date filters and per-entry deletion
-- [ ] Independent retained WebView instances and isolated private storage
-- [ ] Pause/resume controls (Android DownloadManager does not expose a public pause/resume API)
-- [ ] Media playback enhancements and picture-in-picture
+## Current limitations — do not treat as completed
+- The WebView engine is device-provided; a separately bundled Chromium engine is not included.
+- Regular-tab restoration reloads saved URLs and does not guarantee restoration of live page state or full navigation history.
+- Private tabs are currently not fully isolated from regular-tab cookies, cache, and DOM storage. Do not describe them as secure isolated private profiles.
+- Bookmark folders, richer history management, independent retained WebViews, and enhanced media/Picture-in-Picture behavior remain in the roadmap.
+- Android DownloadManager does not expose a public pause/resume API.
+- AI assistant contract is scaffolded, but live AI responses require a configured secure backend. No provider API key may be stored in the APK.
 
-### Important limitations
+## Development roadmap
+1. Core stability: URL resolution, navigation, WebView lifecycle, mode switching, responsive controls.
+2. Browsing: retained per-tab WebViews, tab restoration, tab groups, isolated private profiles.
+3. Library: bookmark folders, history filters, per-entry deletion, search history.
+4. Downloads and media: reliable lifecycle UI, media session and Picture-in-Picture where supported.
+5. Privacy: per-origin permissions, tracking protection, safe defaults, private-profile isolation.
+6. AI assistant: consent-based page extraction, secure backend, summaries, translation, streaming.
+7. Release: automated tests, lint, APK build, physical-device QA, accessibility and performance checks.
 
-- Android System WebView is provided by the device; a separate bundled Chromium engine is not included.
-- Regular-tab session restoration reloads saved URLs; it does not preserve live page state or full back/forward history.
-- Private-labelled tabs are not persisted and do not write to browsing history or bookmarks through the current browser UI, but their cookies/cache/DOM storage are **not isolated** from regular tabs.
-- Bookmark folder metadata is represented in the database, but folder management controls are not yet available.
-- Phase 5 and the first Phase 6 downloads implementation pass the GitHub Actions Gradle configuration, unit-test task, and debug APK build. Physical-device download behavior still needs testing.
-- Android DownloadManager owns transfer execution and system notifications; the app does not currently expose pause/resume controls.
-- Downloads are disabled from private-labelled tabs because system downloads are persisted by Android and the current private mode is not storage-isolated.
-
-## Technology
-
-- Kotlin, Jetpack Compose, Material 3
-- Android System WebView
-- Room database for bookmarks and history
-- SharedPreferences for lightweight tab-session metadata
-- Minimum Android 10 (API 29), Java 17
-
-## Run locally
-
+## Build and test
 1. Open the repository in Android Studio.
-2. Allow Gradle sync to complete and resolve the Room/KSP dependencies.
-3. Run the `app` configuration on an Android 10+ emulator or device.
-4. Internet access is required to load websites.
+2. Use JDK 17 and allow Gradle sync to finish.
+3. Run on an Android 10+ emulator or physical device.
+4. Internet access is required for websites.
+5. Run `gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`.
 
-## Development principles
-
-- Build and test each phase before marking it release-ready.
+## Engineering principles
 - Do not ship controls that pretend to work.
-- Keep engine integration modular before considering a custom Chromium engine.
-- Store secrets only with platform-backed secure storage.
-- Review permissions and privacy implications before adding capabilities.
+- Do not bypass TLS certificate errors.
+- Do not expose JavaScript bridges to untrusted origins.
+- Keep AI provider credentials server-side.
+- Obtain user consent before sending page content to an AI backend.
+- Mark a feature complete only after automated tests and physical-device checks pass.
 
 ## License
-
 No license has been selected. All rights reserved by default until a license is added.
