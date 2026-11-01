@@ -126,7 +126,26 @@ private fun BrowserApp() {
     fun switchDesktop() {
         desktop = !desktop
         store.edit().putBoolean("desktop", desktop).apply()
-        // Recreate the WebView so the selected User-Agent is active before navigation.
+
+        // Some mobile sites (notably YouTube's m.youtube.com) stay on a
+        // mobile-only hostname even after the desktop User-Agent changes.
+        // Move an m.* host to www.* when entering desktop mode.
+        if (desktop && currentUrl.isNotBlank()) {
+            val parsed = Uri.parse(currentUrl)
+            val host = parsed.host.orEmpty()
+            if (host.startsWith("m.")) {
+                val desktopUrl = parsed.buildUpon()
+                    .encodedAuthority("www.${host.removePrefix("m.")}")
+                    .build()
+                    .toString()
+                currentUrl = desktopUrl
+                address = desktopUrl
+                tabs = tabs.map { if (it.id == activeId) it.copy(url = desktopUrl) else it }
+            }
+        }
+
+        // Recreate the WebView so the selected User-Agent and viewport
+        // are applied before the current page is requested again.
         webView = null
         progress = 0
     }
