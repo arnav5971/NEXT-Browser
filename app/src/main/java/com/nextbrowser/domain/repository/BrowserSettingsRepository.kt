@@ -10,4 +10,5 @@ interface BrowserSettingsRepository {
     suspend fun setDynamicColorEnabled(enabled: Boolean)
     suspend fun setAccentColor(hexColor: String)
     suspend fun setSearchEngine(engine: String)
+    suspend fun setDesktopSiteEnabled(enabled: Boolean)
 }
