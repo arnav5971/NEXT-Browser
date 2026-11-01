@@ -10,6 +10,7 @@ import android.os.Environment
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -136,7 +137,11 @@ private fun BrowserApp() {
                                 DropdownMenuItem(text = { Text("Bookmarks") }, onClick = { panel = "Bookmarks"; menu = false }, leadingIcon = { Icon(Icons.Default.Bookmarks, null) })
                                 DropdownMenuItem(text = { Text("History") }, onClick = { panel = "History"; menu = false }, leadingIcon = { Icon(Icons.Default.History, null) })
                                 DropdownMenuItem(text = { Text("Downloads") }, onClick = { panel = "Downloads"; menu = false }, leadingIcon = { Icon(Icons.Default.Download, null) })
-                                DropdownMenuItem(text = { Text(if (desktop) "Mobile site" else "Desktop site") }, onClick = { desktop = !desktop; menu = false; webView?.settings?.useWideViewPort = desktop; webView?.settings?.loadWithOverviewMode = desktop }, leadingIcon = { Icon(Icons.Default.Computer, null) })
+                                DropdownMenuItem(text = { Text(if (desktop) "Mobile site" else "Desktop site") }, onClick = {
+                                    desktop = !desktop
+                                    menu = false
+                                    webView?.let { configureBrowserMode(context, it, desktop); it.reload() }
+                                }, leadingIcon = { Icon(Icons.Default.Computer, null) })
                                 DropdownMenuItem(text = { Text(if (dark) "Light theme" else "Dark theme") }, onClick = { dark = !dark; menu = false }, leadingIcon = { Icon(Icons.Default.DarkMode, null) })
                                 DropdownMenuItem(text = { Text("Share page") }, onClick = {
                                     menu = false
@@ -232,6 +237,22 @@ private fun HomePage(modifier: Modifier, privateMode: Boolean, onSearch: (String
     }
 }
 
+private fun configureBrowserMode(context: Context, view: WebView, desktop: Boolean) {
+    val mobileAgent = WebSettings.getDefaultUserAgent(context)
+    val chromeVersion = Regex("Chrome/[0-9.]+").find(mobileAgent)?.value ?: "Chrome/120.0.0.0"
+    val desktopAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) $chromeVersion Safari/537.36"
+    view.settings.apply {
+        javaScriptEnabled = true
+        domStorageEnabled = true
+        loadsImagesAutomatically = true
+        // Always honor responsive viewport metadata; desktop mode changes the UA as well.
+        useWideViewPort = true
+        loadWithOverviewMode = desktop
+        userAgentString = if (desktop) desktopAgent else mobileAgent
+        layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
+    }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun BrowserWebView(
@@ -244,11 +265,7 @@ private fun BrowserWebView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
             WebView(ctx).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadsImagesAutomatically = true
-                settings.useWideViewPort = desktop
-                settings.loadWithOverviewMode = desktop
+                configureBrowserMode(ctx, this, desktop)
                 webChromeClient = object : WebChromeClient() {
                     override fun onProgressChanged(view: WebView?, value: Int) { onProgress(value) }
                 }
@@ -264,12 +281,12 @@ private fun BrowserWebView(
                 }
                 setDownloadListener { downloadUrl, agent, disposition, mime, _ -> onDownload(downloadUrl, agent, disposition, mime) }
                 onCreated(this)
+                if (url.isNotBlank()) loadUrl(url)
             }
         },
         update = { view ->
+            configureBrowserMode(context, view, desktop)
             if (url.isNotBlank() && view.url != url) view.loadUrl(url)
-            view.settings.useWideViewPort = desktop
-            view.settings.loadWithOverviewMode = desktop
         }
     )
 }
