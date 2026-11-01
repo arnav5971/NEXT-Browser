@@ -153,7 +153,10 @@ fun HomeScreen(
             }
             Spacer(Modifier.height(24.dp))
             Text(
-                "A little more room to\nroam.",
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = ink)) { append("A little more ") }
+                    withStyle(SpanStyle(color = blue)) { append("room to\nroam.") }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-1.5).sp),
