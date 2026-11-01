@@ -56,6 +56,7 @@ import com.nextbrowser.domain.model.BrowserTab
 import com.nextbrowser.ui.screens.browser.BrowserTabsViewModel
 import com.nextbrowser.ui.screens.browser.BrowserScreen
 import com.nextbrowser.ui.screens.home.HomeScreen
+import com.nextbrowser.ui.screens.assistant.AiAssistantSetupDialog
 import com.nextbrowser.ui.screens.downloads.DownloadsDialog
 import com.nextbrowser.ui.screens.library.LibraryDialog
 import com.nextbrowser.ui.theme.NextBrowserTheme
@@ -113,6 +114,7 @@ private fun NextBrowserApp(
     var showTabSwitcher by remember { mutableStateOf(false) }
     var showDownloadsDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showAiAssistant by remember { mutableStateOf(false) }
     val activeTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.firstOrNull()
 
     // Keep the UI alive even if a restored session is temporarily empty or corrupt.
@@ -132,7 +134,8 @@ private fun NextBrowserApp(
             onCloseTab = { tabsViewModel.closeTab(activeTab.id) },
             onShowBookmarks = { libraryMode = "bookmarks" },
             onShowHistory = { libraryMode = "history" },
-            onShowSettings = { showSettingsDialog = true }
+            onShowSettings = { showSettingsDialog = true },
+            onShowAiAssistant = { showAiAssistant = true }
         )
     } else {
         key(activeTab.id, browserSettings.desktopSite) {
@@ -225,6 +228,10 @@ private fun NextBrowserApp(
             onDesktopSiteChange = settingsViewModel::setDesktopSiteEnabled,
             onDismiss = { showSettingsDialog = false }
         )
+    }
+
+    if (showAiAssistant) {
+        AiAssistantSetupDialog(onDismiss = { showAiAssistant = false })
     }
 
     if (showTabSwitcher) {
