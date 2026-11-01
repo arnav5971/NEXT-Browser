@@ -117,7 +117,7 @@ fun HomeScreen(
                     }
                 }
             }
-            IconButton(onClick = onShowTabs, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Add, "New tab", tint = muted) }
+            IconButton(onClick = onNewTab, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Add, "New tab", tint = muted) }
             IconButton(onClick = onShowSettings, modifier = Modifier.size(40.dp)) { Icon(Icons.Default.MoreVert, "More options", tint = muted) }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f))
@@ -136,9 +136,9 @@ fun HomeScreen(
 
             Spacer(Modifier.height(34.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Surface(shape = RoundedCornerShape(30.dp), color = blue.copy(alpha = .12f), modifier = Modifier.size(34.dp)) {
+                Surface(shape = RoundedCornerShape(30.dp), color = blue.copy(alpha = .12f), modifier = Modifier.size(58.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Language, null, tint = blue, modifier = Modifier.size(58.dp))
+                        Icon(Icons.Default.Language, null, tint = blue, modifier = Modifier.size(34.dp))
                     }
                 }
             }
