@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.Build
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -125,7 +126,8 @@ private fun BrowserApp() {
     fun switchDesktop() {
         desktop = !desktop
         store.edit().putBoolean("desktop", desktop).apply()
-        webView?.let { configureBrowserMode(context, it, desktop); it.reload() }
+        // Recreate the WebView so the selected User-Agent is active before navigation.
+        webView = null
     }
 
     BackHandler(enabled = panel.isNotEmpty() || webView?.canGoBack() == true) {
@@ -259,7 +261,7 @@ private fun BrowserApp() {
                     onOpen = { navigate(it) },
                     onPanel = { panel = it }
                 )
-                else -> key(active.id) {
+                else -> key(active.id, desktop) {
                     BrowserWebView(
                         url = active.url.ifBlank { currentUrl },
                         desktop = desktop,
@@ -456,9 +458,12 @@ private fun LibraryRow(title: String, url: String, icon: androidx.compose.ui.gra
 }
 
 private fun configureBrowserMode(context: Context, view: WebView, desktop: Boolean) {
-    val mobileAgent = WebSettings.getDefaultUserAgent(context)
-    val chromeVersion = Regex("Chrome/[0-9.]+").find(mobileAgent)?.value ?: "Chrome/120.0.0.0"
-    val desktopAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) $chromeVersion Safari/537.36"
+    val systemAgent = WebSettings.getDefaultUserAgent(context)
+    val chromeVersion = Regex("Chrome/[0-9.]+").find(systemAgent)?.value ?: "Chrome/120.0.0.0"
+    val model = Build.MODEL.replace(Regex("[^A-Za-z0-9 _-]"), "").trim().ifBlank { "Android Device" }
+    val mobileAgent = "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; ${model}) AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion} Mobile Safari/537.36"
+    val desktopAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion} Safari/537.36"
+
     view.settings.apply {
         javaScriptEnabled = true
         domStorageEnabled = true
@@ -476,7 +481,6 @@ private fun configureBrowserMode(context: Context, view: WebView, desktop: Boole
         layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
     }
 }
-
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun BrowserWebView(
@@ -501,7 +505,16 @@ private fun BrowserWebView(
                         return try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)); true } catch (_: Exception) { true }
                     }
                     override fun onPageFinished(view: WebView?, finished: String?) {
-                        if (!finished.isNullOrBlank()) onPage(finished, view?.title ?: finished)
+                        if (!finished.isNullOrBlank()) {
+                            val viewport = if (desktop) {
+                                "width=1024, initial-scale=0.75, minimum-scale=0.25, maximum-scale=5, user-scalable=yes"
+                            } else {
+                                "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"
+                            }
+                            val script = "(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}m.setAttribute('content','" + viewport + "');})();"
+                            view?.evaluateJavascript(script, null)
+                            onPage(finished, view?.title ?: finished)
+                        }
                     }
                 }
                 setDownloadListener { downloadUrl, agent, disposition, mime, _ -> onDownload(downloadUrl, agent, disposition, mime) }
