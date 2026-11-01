@@ -126,7 +126,7 @@ private fun NextBrowserApp(
             onShowSettings = { showSettingsDialog = true }
         )
     } else {
-        key(activeTab.id) {
+        key(activeTab.id, browserSettings.desktopSite) {
         BrowserScreen(
             initialUrl = activeTab.url.orEmpty(),
             searchEngine = browserSettings.searchEngine,
@@ -136,6 +136,7 @@ private fun NextBrowserApp(
             onShowTabs = { showTabSwitcher = true },
             tabCount = tabs.size,
             isPrivateTab = activeTab.isPrivate,
+            desktopSite = browserSettings.desktopSite,
             onUrlChanged = { url ->
                 tabsViewModel.updateTab(activeTab.id) { tab ->
                     if (tab.url == url) tab else tab.copy(url = url)
@@ -211,6 +212,7 @@ private fun NextBrowserApp(
             onThemeChange = settingsViewModel::setThemeMode,
             onSearchEngineChange = settingsViewModel::setSearchEngine,
             onDynamicColorChange = settingsViewModel::setDynamicColorEnabled,
+            onDesktopSiteChange = settingsViewModel::setDesktopSiteEnabled,
             onDismiss = { showSettingsDialog = false }
         )
     }

@@ -7,6 +7,7 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebSettings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ fun BrowserScreen(
     onShowTabs: () -> Unit,
     tabCount: Int,
     isPrivateTab: Boolean,
+    desktopSite: Boolean = false,
     onUrlChanged: (String) -> Unit,
     onTitleChanged: (String) -> Unit,
     onPageVisited: (String, String) -> Unit,
@@ -132,6 +134,7 @@ fun BrowserScreen(
                 webViewInstance?.let { view ->
                     val state = Bundle()
                     view.saveState(state)
+                    state.putBoolean("next_browser_desktop_site", desktopSite)
                     currentSaveWebViewStateHandler(state, view.url)
                 }
                 engine.destroy()
@@ -211,6 +214,17 @@ fun BrowserScreen(
                     webViewInstance = this
                     val engine = WebViewBrowserEngine(this)
                     browserEngine = engine
+                    val defaultAgent = WebSettings.getDefaultUserAgent(context)
+                    val chromeVersion = Regex("Chrome/([0-9.]+)")
+                        .find(defaultAgent)?.groupValues?.getOrNull(1) ?: "120.0.0.0"
+                    settings.userAgentString = if (desktopSite) {
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$chromeVersion Safari/537.36"
+                    } else {
+                        defaultAgent.replace("; wv", "").replace("Version/4.0 ", "")
+                    }
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = desktopSite
+                    settings.textZoom = 100
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.loadsImagesAutomatically = true
@@ -336,7 +350,10 @@ fun BrowserScreen(
                         }
                     }
 
-                    val restoredState = savedWebViewState?.let { restoreState(it) }
+                    val compatibleState = savedWebViewState?.takeIf {
+                        it.getBoolean("next_browser_desktop_site", false) == desktopSite
+                    }
+                    val restoredState = compatibleState?.let { restoreState(it) }
                     if (restoredState == null) {
                         engine.loadUrl(resolveAddress(initialUrl, searchEngine))
                     } else {
