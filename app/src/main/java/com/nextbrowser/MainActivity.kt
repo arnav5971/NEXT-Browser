@@ -457,53 +457,6 @@ private fun LibraryRow(title: String, url: String, icon: androidx.compose.ui.gra
     }
 }
 
-/**
- * Build explicit browser identities instead of forwarding Android WebView's
- * default "wv" identity. Several sites treat that identity as an embedded
- * browser and may return an inconsistent/desktop fallback layout.
- */
-private fun chromeVersion(context: Context): String {
-    val systemAgent = WebSettings.getDefaultUserAgent(context)
-    return Regex("Chrome/[0-9.]+").find(systemAgent)?.value ?: "Chrome/120.0.0.0"
-}
-
-private fun mobileBrowserUserAgent(context: Context): String {
-    val androidRelease = Build.VERSION.RELEASE.ifBlank { "10" }
-    val deviceModel = Build.MODEL.orEmpty().replace(Regex("[^A-Za-z0-9 _.-]"), "").ifBlank { "Android" }
-    return "Mozilla/5.0 (Linux; Android $androidRelease; $deviceModel) " +
-        "AppleWebKit/537.36 (KHTML, like Gecko) ${chromeVersion(context)} Mobile Safari/537.36"
-}
-
-private fun desktopBrowserUserAgent(context: Context): String =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
-        "${chromeVersion(context)} Safari/537.36"
-
-/**
- * One source of truth for both modes.
- * Mobile: device-width viewport, no overview scaling.
- * Desktop: wide viewport and overview scaling so desktop layouts fit the phone.
- */
-private fun configureBrowserMode(context: Context, view: WebView, desktop: Boolean) {
-    view.settings.apply {
-        javaScriptEnabled = true
-        domStorageEnabled = true
-        databaseEnabled = true
-        loadsImagesAutomatically = true
-        javaScriptCanOpenWindowsAutomatically = true
-        mediaPlaybackRequiresUserGesture = false
-        setSupportMultipleWindows(false)
-        setSupportZoom(true)
-        builtInZoomControls = true
-        displayZoomControls = false
-        textZoom = 100
-        layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
-        useWideViewPort = true
-        loadWithOverviewMode = desktop
-        userAgentString = if (desktop) desktopBrowserUserAgent(context) else mobileBrowserUserAgent(context)
-        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-    }
-}
-
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun BrowserWebView(
@@ -522,7 +475,9 @@ private fun BrowserWebView(
         factory = { ctx ->
             WebView(ctx).apply {
                 setBackgroundColor(android.graphics.Color.WHITE)
-                configureBrowserMode(ctx, this, desktop)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.loadsImagesAutomatically = true
 
                 webChromeClient = object : WebChromeClient() {
                     override fun onProgressChanged(view: WebView?, value: Int) {
@@ -563,9 +518,7 @@ private fun BrowserWebView(
             }
         },
         update = { view ->
-            // The parent keys this AndroidView by (tab id, desktop mode), so a
-            // mode change creates a fresh WebView with the correct UA before load.
-            configureBrowserMode(context, view, desktop)
+            // Keep the default WebView identity while the old custom mode logic is removed.
             if (url.isNotBlank() && view.url != url) view.loadUrl(url)
         }
     )
