@@ -299,7 +299,7 @@ private fun BrowserApp() {
 @Composable
 private fun BrowserBottomBar(
     canBack: Boolean, canForward: Boolean, tabCount: Int, isHome: Boolean,
-    onBack: () -> Unit, onForward: () -> Unit, onReload: () -> Unit, onHome: () -> Unit, onTabs: () -> Unit
+    onBack: () -> Unit, onForward: () -> Unit, onReload: () -> Unit, onHome: () -> Unit, onNewTab: () -> Unit, onTabs: () -> Unit
 ) {
     Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 10.dp) {
         Row(
@@ -310,7 +310,7 @@ private fun BrowserBottomBar(
             BottomAction(Icons.Default.ArrowBack, "Back", canBack, onBack)
             BottomAction(Icons.Default.ArrowForward, "Forward", canForward, onForward)
             BottomAction(if (isHome) Icons.Default.Home else Icons.Default.Refresh, if (isHome) "Home" else "Reload", true, if (isHome) onHome else onReload)
-            BottomAction(Icons.Default.Add, "New tab", true, onHome)
+            BottomAction(Icons.Default.Add, "New tab", true, onNewTab)
             Box(contentAlignment = Alignment.Center) {
                 IconButton(onClick = onTabs, modifier = Modifier.size(42.dp)) {
                     Icon(Icons.Default.Tab, null, tint = MaterialTheme.colorScheme.onSurface)
