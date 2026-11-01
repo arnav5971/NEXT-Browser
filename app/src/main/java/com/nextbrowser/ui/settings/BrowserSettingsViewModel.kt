@@ -37,4 +37,8 @@ class BrowserSettingsViewModel @Inject constructor(
     fun setSearchEngine(engine: String) {
         viewModelScope.launch { repository.setSearchEngine(engine) }
     }
+
+    fun setDesktopSiteEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.setDesktopSiteEnabled(enabled) }
+    }
 }
