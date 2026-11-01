@@ -190,13 +190,15 @@ private fun BrowserApp() {
                         onDownload = { url, agent, disposition, mime ->
                             runCatching {
                                 val name = disposition?.substringAfter("filename=")?.trim('"')?.takeIf { it.isNotBlank() } ?: Uri.parse(url).lastPathSegment ?: "download"
-                                val request = DownloadManager.Request(Uri.parse(url))
-                                    .setTitle(name).setDescription("NEXT Browser download")
-                                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
-                                if (!agent.isNullOrBlank()) request.addRequestHeader("User-Agent", agent)
-                                if (!mime.isNullOrBlank()) request.setMimeType(mime)
-                                CookieManager.getInstance().getCookie(url)?.let { request.addRequestHeader("Cookie", it) }
+                                val request = DownloadManager.Request(Uri.parse(url)).apply {
+                                    setTitle(name)
+                                    setDescription("NEXT Browser download")
+                                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
+                                    if (!agent.isNullOrBlank()) addRequestHeader("User-Agent", agent)
+                                    if (!mime.isNullOrBlank()) setMimeType(mime)
+                                    CookieManager.getInstance().getCookie(url)?.let { addRequestHeader("Cookie", it) }
+                                }
                                 context.getSystemService(DownloadManager::class.java).enqueue(request)
                                 Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
                             }.onFailure { Toast.makeText(context, "Download failed", Toast.LENGTH_SHORT).show() }
