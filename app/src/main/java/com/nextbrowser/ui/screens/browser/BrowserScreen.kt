@@ -248,10 +248,8 @@ fun BrowserScreen(
                     settings.setSupportZoom(true)
                     settings.builtInZoomControls = true
                     settings.displayZoomControls = false
-                    CookieManager.getInstance().apply {
-                        setAcceptCookie(true)
-                        setAcceptThirdPartyCookies(this@apply, true)
-                    }
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(
@@ -376,7 +374,7 @@ fun BrowserScreen(
                                 FrameLayout.LayoutParams.MATCH_PARENT
                             ))
                             webViewInstance?.visibility = View.GONE
-                            activity.window.setFlags(
+                            activity?.window?.setFlags(
                                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                                 WindowManager.LayoutParams.FLAG_FULLSCREEN
                             )
